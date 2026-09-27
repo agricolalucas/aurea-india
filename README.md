@@ -4,11 +4,11 @@ Baseline: `Aaurea_India_Import_GST_Prototype (29).html`, supplied on 27 Septembe
 
 ## Setup
 
-1. Create a separate Supabase project named `aurea-india`.
-2. Run `schema.sql` in that project's SQL Editor.
-3. Register users in Supabase Auth and add each user to `public.india_members` by UUID.
-4. Set the HTML's `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` to the new project's public values before publishing.
+1. Supabase project `aurea-india`: `gqpxtedduizfzgejeqqj`.
+2. The tables in `schema.sql` were applied on 27 September 2026; it is the schema record, not a script to rerun verbatim over existing policies.
+3. Create staff accounts in this project's Supabase Auth and add each user to `public.india_members` by UUID. Example: `insert into public.india_members(user_id,role) values ('AUTH_USER_UUID_HERE','admin');` Run this only for a known administrator.
+4. `index.html` has this project's URL and publishable key. Enable GitHub Pages to serve the HTML when ready.
 
-The current HTML points at the existing `AES-TEST` project. Only the `shipments` list currently saves to Supabase. Profiles, payments, expenses, documents, tickets, and several other modules still use browser `localStorage`. `schema.sql` covers the actively integrated shipment table; it does not make the other modules collaborative.
+Only the `shipments` list currently saves to Supabase. Profiles, payments, expenses, documents, tickets, and several other modules still use browser `localStorage`; the matching tables are prepared but the HTML does not yet write those records to them. Files attached in the prototype are still stored locally in the browser, not in Supabase Storage. The prototype must be updated before those modules become collaborative.
 
 This prototype has not yet been published for India.
