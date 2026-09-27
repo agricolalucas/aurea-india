@@ -1527,14 +1527,18 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
   });
 
   const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const openingInvitation = hash.get('type') === 'invite';
   if (hash.get('error_code')) {
     authError.textContent = hash.get('error_description') || 'Recovery link is invalid or has expired. Request a new password recovery email.';
     history.replaceState({}, document.title, location.pathname);
   }
 
-  db.auth.getSession().then(({data})=>applySession(data.session));
+  db.auth.getSession().then(({data})=>{
+    if(openingInvitation && data.session) showRecovery();
+    else applySession(data.session);
+  });
   db.auth.onAuthStateChange((event,session)=>{
-    if(event === 'PASSWORD_RECOVERY') { showRecovery(); return; }
+    if(event === 'PASSWORD_RECOVERY' || (openingInvitation && session)) { showRecovery(); return; }
     if(!session) applySession(null);
   });
 })();
