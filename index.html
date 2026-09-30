@@ -681,7 +681,7 @@ body{background:linear-gradient(145deg,#f5f8f5 0%,#edf3ef 100%);letter-spacing:-
         <div class="field"><label>Lot</label><input name="lot" placeholder="e.g. SES-2609-01"></div>
         <div class="field"><label>Warehouse</label><input name="warehouse" required placeholder="e.g. Nhava Sheva Warehouse"></div>
         <div class="field"><label>Expiry</label><input name="expiry" type="date"></div>
-        <div class="field full"><label>Attach ticket</label><input name="ticketFile" type="file" accept=".pdf,.jpg,.jpeg,.png" required><span class="muted">PDF, JPG or PNG. The prototype stores the attachment name with the ticket record.</span></div>
+        <div class="field full"><label>Attach ticket</label><input name="ticketFile" type="file" accept=".pdf,.jpg,.jpeg,.png" required><span class="muted">PDF, JPG or PNG. The ticket is stored privately and linked to this shipment. Maximum 10 MB.</span></div>
         <div class="field full"><label>Notes</label><textarea name="notes" rows="2" placeholder="Optional receiving notes"></textarea></div>
       </div>
       <div class="dialog-foot"><button type="button" class="secondary receivingCancel">Cancel</button><button type="submit" class="primary">Save Received Weight & Ticket</button></div>
@@ -979,7 +979,26 @@ initImportStageTabs();
   }
 
   function receivingKey(ref){return `aureaReceivingTickets:${ref}`;}
-  function getReceivingTickets(ref){return JSON.parse(localStorage.getItem(receivingKey(ref))||'[]');}
+  const receivingCache=new Map();
+  function getReceivingTickets(ref){return receivingCache.get(ref)||[];}
+  function ticketFromDb(x){return {...(x.details||{}),id:x.id,date:x.ticket_date,container:x.container_number,weightFull:Number(x.gross_weight_kg||0),weightEmpty:Number(x.tare_weight_kg||0),weight:Number(x.received_weight_kg||0)};}
+  async function loadReceivingTickets(){
+    const {data,error}=await window.indiaDb.from('india_receiving_tickets').select('*').order('created_at');
+    if(error)throw Error('Could not load receiving tickets: '+error.message);
+    const rows=data||[];
+    for(const shipment of window.loadedShipments||[]){
+      let legacy=[];try{legacy=JSON.parse(localStorage.getItem(receivingKey(shipment.reference))||'[]')}catch(_){}
+      for(const t of legacy){
+        const legacyKey=JSON.stringify(t);
+        if(rows.some(x=>x.shipment_reference===shipment.reference&&x.details?.legacyKey===legacyKey))continue;
+        const payload={shipment_id:shipment.id,shipment_reference:shipment.reference,ticket_date:t.date||null,container_number:t.container||'',gross_weight_kg:Number(t.weightFull||0),tare_weight_kg:Number(t.weightEmpty||0),received_weight_kg:Number(t.weight||0),details:{...t,legacyKey}};
+        const {data:imported,error:importError}=await window.indiaDb.from('india_receiving_tickets').insert(payload).select().single();
+        if(importError){notify('Could not import saved local ticket: '+importError.message);break;}rows.push(imported);
+      }
+    }
+    receivingCache.clear();for(const x of rows){const a=receivingCache.get(x.shipment_reference)||[];a.push(ticketFromDb(x));receivingCache.set(x.shipment_reference,a);}
+    renderReceivingTickets();
+  }
   function saveReceivingTickets(ref,tickets){localStorage.setItem(receivingKey(ref),JSON.stringify(tickets));}
   function getSelectedShipmentInfo(){
     if(!selectedShipment) return null;
@@ -998,7 +1017,7 @@ initImportStageTabs();
     tickets.forEach((t,i)=>{
       total+=Number(t.weight)||0;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${t.date||''}</td><td><b>${t.container||''}</b></td><td>${t.ticketNo||''}</td><td>${Number(t.weightFull||0).toLocaleString('en-US')} kg</td><td>${Number(t.weightEmpty||0).toLocaleString('en-US')} kg</td><td><b>${Number(t.weight||0).toLocaleString('en-US')} kg</b></td><td>${t.transportName||'—'}</td><td>${t.fileName?`📎 ${t.fileName}`:'—'}</td><td><button class="mini-btn delete-receiving-ticket" data-index="${i}" type="button">Delete</button></td>`;
+      tr.innerHTML=`<td>${docEsc(t.date||'')}</td><td><b>${docEsc(t.container||'')}</b></td><td>${docEsc(t.ticketNo||'')}</td><td>${Number(t.weightFull||0).toLocaleString('en-US')} kg</td><td>${Number(t.weightEmpty||0).toLocaleString('en-US')} kg</td><td><b>${Number(t.weight||0).toLocaleString('en-US')} kg</b></td><td>${docEsc(t.transportName||'—')}</td><td>${t.storagePath?`<button type="button" class="mini-btn open-receiving-ticket" data-index="${i}">📎 ${docEsc(t.fileName||'Open ticket')}</button>`:`<label class="mini-btn">Attach ticket<input type="file" class="reattach-receiving-ticket" data-index="${i}" accept=".pdf,.jpg,.jpeg,.png" style="display:none"></label>`}</td><td><button class="mini-btn delete-receiving-ticket" data-index="${i}" type="button">Delete</button></td>`;
       tbody.appendChild(tr);
     });
     document.getElementById('selectedShipmentReceived').textContent=`${total.toLocaleString('en-US')} kg`;
@@ -1045,19 +1064,47 @@ initImportStageTabs();
     const f=e.currentTarget, full=Number(f.elements.weightFull?.value||0), empty=Number(f.elements.weightEmpty?.value||0);
     if(f.elements.weight) f.elements.weight.value=(full||empty)?Math.max(0,full-empty).toFixed(2):'';
   });
-  document.getElementById('receivingTicketForm').onsubmit=e=>{
+  document.getElementById('receivingTicketForm').onsubmit=async e=>{
     e.preventDefault();
-    const info=getSelectedShipmentInfo();
-    if(!info){notify('Select a shipment first');return;}
-    const fd=new FormData(e.target), file=fd.get('ticketFile');
-    const weightFull=Number(fd.get('weightFull')||0),weightEmpty=Number(fd.get('weightEmpty')||0),receivedWeight=Math.max(0,weightFull-weightEmpty); const record={date:fd.get('date'),container:fd.get('container'),ticketNo:fd.get('ticketNo'),weightFull,weightEmpty,weight:receivedWeight,transportName:fd.get('transportName')||'',lot:fd.get('lot')||'',warehouse:fd.get('warehouse')||'',expiry:fd.get('expiry')||'',fileName:file&&file.name?file.name:'',notes:fd.get('notes')||''};
-    const tickets=getReceivingTickets(info.ref);tickets.push(record);saveReceivingTickets(info.ref,tickets);
-    e.target.reset();toggleModal(receivingModal,false);renderReceivingTickets();renderInventory();notify(`Received weight added to ${info.ref}`);
+    const info=getSelectedShipmentInfo();if(!info){notify('Select a shipment first');return;}
+    const shipment=(window.loadedShipments||[]).find(x=>x.reference===info.ref);
+    if(!shipment){notify('Shipment not found. Refresh the page.');return;}
+    const form=e.target,button=form.querySelector('[type="submit"]');if(button.disabled)return;
+    const fd=new FormData(form),file=fd.get('ticketFile'),weightFull=Number(fd.get('weightFull')),weightEmpty=Number(fd.get('weightEmpty'));
+    if(!Number.isFinite(weightFull)||!Number.isFinite(weightEmpty)||weightFull<=weightEmpty){notify('Full weight must be greater than empty weight.');return;}
+    if(!file?.size){notify('Attach the receiving ticket.');return;}
+    if(file.size>10*1024*1024||!['application/pdf','image/jpeg','image/png'].includes(file.type)){notify('Attach a PDF, JPG or PNG of up to 10 MB.');return;}
+    button.disabled=true;button.textContent='Saving…';
+    try{
+      const storagePath=`receiving-tickets/${shipment.id}/${crypto.randomUUID()}.${file.name.split('.').pop().toLowerCase()}`;
+      const {error:uploadError}=await window.indiaDb.storage.from('india-profile-documents').upload(storagePath,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;
+      const details={ticketNo:fd.get('ticketNo'),transportName:fd.get('transportName')||'',lot:fd.get('lot')||'',warehouse:fd.get('warehouse')||'',expiry:fd.get('expiry')||'',fileName:file.name,storagePath,notes:fd.get('notes')||''};
+      const payload={shipment_id:shipment.id,shipment_reference:info.ref,ticket_date:fd.get('date'),container_number:fd.get('container'),gross_weight_kg:weightFull,tare_weight_kg:weightEmpty,received_weight_kg:weightFull-weightEmpty,details};
+      const {data,error}=await window.indiaDb.from('india_receiving_tickets').insert(payload).select().single();if(error)throw error;
+      receivingCache.set(info.ref,[...getReceivingTickets(info.ref),ticketFromDb(data)]);
+      form.reset();toggleModal(receivingModal,false);renderReceivingTickets();renderInventory();notify(`Received weight saved for ${info.ref}`);
+    }catch(err){notify('Could not save receiving ticket: '+err.message);}finally{button.disabled=false;button.textContent='Save Received Weight & Ticket';}
   };
-  document.querySelector('#receivingTicketTable tbody').onclick=e=>{
-    const btn=e.target.closest('.delete-receiving-ticket');if(!btn)return;
+  document.querySelector('#receivingTicketTable tbody').onchange=async e=>{
+    const input=e.target.closest('.reattach-receiving-ticket'),file=input?.files?.[0],info=getSelectedShipmentInfo();if(!file||!info)return;
+    const tickets=getReceivingTickets(info.ref),t=tickets[Number(input.dataset.index)];if(!t?.id)return;
+    if(file.size>10*1024*1024||!['application/pdf','image/jpeg','image/png'].includes(file.type)){notify('Attach a PDF, JPG or PNG of up to 10 MB.');return;}
+    input.disabled=true;
+    try{const storagePath=`receiving-tickets/${t.id}/${crypto.randomUUID()}.${file.name.split('.').pop().toLowerCase()}`;
+      const {error:uploadError}=await window.indiaDb.storage.from('india-profile-documents').upload(storagePath,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;
+      const details={...t,fileName:file.name,storagePath};const {data,error}=await window.indiaDb.from('india_receiving_tickets').update({details}).eq('id',t.id).select().single();if(error)throw error;
+      tickets[Number(input.dataset.index)]=ticketFromDb(data);renderReceivingTickets();notify('Ticket attachment saved');
+    }catch(err){notify('Could not attach ticket: '+err.message);}finally{input.disabled=false;}
+  };
+  document.querySelector('#receivingTicketTable tbody').onclick=async e=>{
     const info=getSelectedShipmentInfo();if(!info)return;
-    const tickets=getReceivingTickets(info.ref);tickets.splice(Number(btn.dataset.index),1);saveReceivingTickets(info.ref,tickets);renderReceivingTickets();renderInventory();notify('Receiving ticket deleted');
+    const open=e.target.closest('.open-receiving-ticket');
+    if(open){const t=getReceivingTickets(info.ref)[Number(open.dataset.index)];const {data,error}=await window.indiaDb.storage.from('india-profile-documents').createSignedUrl(t.storagePath,60);if(error){notify('Could not open ticket: '+error.message);return;}window.open(data.signedUrl,'_blank','noopener');return;}
+    const btn=e.target.closest('.delete-receiving-ticket');if(!btn)return;
+    const tickets=getReceivingTickets(info.ref),ticket=tickets[Number(btn.dataset.index)];if(!ticket?.id)return;
+    if(!confirm('Delete this receiving ticket for all users?'))return;
+    const {data,error}=await window.indiaDb.from('india_receiving_tickets').delete().eq('id',ticket.id).select('id');if(error||!data?.length){notify('Could not delete ticket: '+(error?.message||'Administrator access is required.'));return;}
+    receivingCache.set(info.ref,tickets.filter(x=>x.id!==ticket.id));renderReceivingTickets();renderInventory();notify('Receiving ticket deleted');
   };
   document.querySelector('#inventoryTable tbody').onclick=e=>{
     const btn=e.target.closest('.inventory-open-sequence');if(!btn)return;
@@ -1352,7 +1399,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
   const tbody = document.querySelector('#cargoTable tbody');
   const cargoForm = document.getElementById('cargoForm');
   const cargoMarker='\n[AAUREA_CARGO_V1]';
-  function unpackCargo(x){let notes=x.notes||'',items;const i=notes.lastIndexOf(cargoMarker);if(i>=0){try{items=JSON.parse(notes.slice(i+cargoMarker.length));notes=notes.slice(0,i)}catch(_){}}return {notes,items:Array.isArray(items)&&items.length?items:[{lot:'',product:x.product||'',quantity:Number(x.quantity_kg||0)/1000,price:Number(shipmentMeta(x.reference).unitPrice||0)}]};}
+  function unpackCargo(x){let notes=x.notes||'',items=x.details?.cargoItems;const i=notes.lastIndexOf(cargoMarker);if(i>=0){try{items=JSON.parse(notes.slice(i+cargoMarker.length));notes=notes.slice(0,i)}catch(_){}}return {notes,items:Array.isArray(items)&&items.length?items:[{lot:'',product:x.product||'',quantity:Number(x.quantity_kg||0)/1000,price:Number(shipmentMeta(x.reference).unitPrice||0)}]};}
   function readCargo(box){return [...box.querySelectorAll('tbody tr')].map(r=>({lot:r.querySelector('[data-cargo="lot"]').value.trim(),product:r.querySelector('[data-cargo="product"]').value.trim(),quantity:Number(r.querySelector('[data-cargo="quantity"]').value||0),price:Number(r.querySelector('[data-cargo="price"]').value||0)}));}
   function totalCargo(box){const items=readCargo(box),q=items.reduce((n,x)=>n+x.quantity,0),t=items.reduce((n,x)=>n+Math.round(x.quantity*x.price*100)/100,0),f=box.closest('form');box.querySelector('.cargo-quantity').textContent=q.toLocaleString('en-US',{maximumFractionDigits:3});box.querySelector('.cargo-total').textContent=t.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});box.querySelectorAll('tbody tr').forEach((r,i)=>r.querySelector('.line-total').textContent=(items[i].quantity*items[i].price).toFixed(2));f.elements.product.value=[...new Set(items.map(x=>x.product).filter(Boolean))].join(' / ');f.elements.quantity_ton.value=q;f.elements.total_amount.value=t.toFixed(2);f.elements.unit_price.value=q?(t/q).toFixed(4):0;return items;}
   function renderCargo(box,items,editing=true){box.querySelector('tbody').innerHTML=items.map(x=>`<tr>${['lot','product','quantity','price'].map(k=>`<td><input data-cargo="${k}" aria-label="${k}" ${k==='quantity'||k==='price'?`type="number" min="0" step="${k==='quantity'?'0.001':'0.0001'}"`:'type="text"'} ${k==='product'?'required':''} value="${esc(x[k]??'')}" style="width:100%;min-width:${k==='product'?140:90}px" ${editing?'':'readonly'}></td>`).join('')}<td class="line-total"></td><td><button type="button" class="mini-btn cargo-remove" ${editing?'':'hidden'}>Remove</button></td></tr>`).join('');box.querySelector('.cargo-add').hidden=!editing;totalCargo(box);}
@@ -1368,7 +1415,8 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
       const main=JSON.parse(localStorage.getItem(`shipmentMeta:${ref}`)||'{}');
       const legacy=JSON.parse(localStorage.getItem(`shipment-meta:${ref}`)||'{}');
       const parties=JSON.parse(localStorage.getItem('aurea:shipmentParties')||'{}')[ref]||{};
-      return {...legacy,...main,...parties};
+      const remote=(window.loadedShipments||[]).find(x=>x.reference===ref)?.details||{};
+      return {...legacy,...main,...parties,...remote};
     }catch(e){return {}}
   }
   function saveShipmentMeta(ref,meta){
@@ -1421,6 +1469,15 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const {data,error}=await db.from('shipments').select('*').order('created_at',{ascending:false});
     if(error){tbody.innerHTML=`<tr><td colspan="10" style="color:var(--red)">${esc(error.message)}</td></tr>`;return;}
     loadedShipments=data||[]; window.loadedShipments=loadedShipments;
+    for(const x of loadedShipments){
+      const local=shipmentMeta(x.reference);
+      if(!x.details?.exporter&&!x.details?.importer&&(local.exporter||local.importer)){
+        const merged={...local,...(x.details||{}),exporter:local.exporter||'',importer:local.importer||''};
+        const {error:migrationError}=await db.from('shipments').update({details:merged}).eq('id',x.id);
+        if(!migrationError)x.details=merged;else notify('Could not synchronize shipment parties: '+migrationError.message);
+      }
+    }
+    await loadReceivingTickets();
     tbody.innerHTML=data.length?data.map(rowHtml).join(''):'<tr><td colspan="11" class="muted">No shipments registered.</td></tr>';
     if(typeof syncImportDocumentShipments==='function')syncImportDocumentShipments();
     if(typeof renderInventory==='function')renderInventory();
@@ -1461,6 +1518,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const selectedExporter=document.getElementById('shipmentExporter')?.value||d.exporter||'';
     const selectedImporter=document.getElementById('shipmentImporter')?.value||d.importer||'';
     const payload={reference:(d.reference||'').trim(),cargox_number:null,acid_number:(d.acid_number||'').trim()||null,acid_expiry:d.acid_expiry||null,bill_of_lading:(d.bill_of_lading||'').trim()||null,vessel:(d.vessel||'').trim()||null,arrival_port:d.arrival_port||null,eta:d.eta||null,product:(d.product||'').trim()||null,quantity_kg:Number(d.quantity_ton||0)*1000,notes:(d.notes||'').trim()+cargoMarker+JSON.stringify(cargoItems),status:statuses,created_by:user.id};
+    payload.details={exporter:selectedExporter,importer:selectedImporter,originPort:d.origin_port||'',unitPrice:Number(d.unit_price||0),totalAmount:Number(d.total_amount||0),status:statuses,tasks:document.getElementById('shipmentTasks')?.value||'',cargoItems};
     const {error}=await db.from('shipments').insert(payload);
     if(error){notify('Could not save: '+error.message);return;}
     saveShipmentMeta(payload.reference,{exporter:selectedExporter,importer:selectedImporter,originPort:d.origin_port||'',unitPrice:Number(d.unit_price||0),totalAmount:Number(d.total_amount||0),status:statuses,tasks:document.getElementById('shipmentTasks')?.value||''});
@@ -1543,7 +1601,8 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     d.status=[...e.target.querySelectorAll('[name="status_multi"]:checked')].map(x=>x.value).join(' | ')||'Pending';
     const payload={reference:d.reference.trim(),acid_number:d.acid_number||null,acid_expiry:d.acid_expiry||null,bill_of_lading:d.bill_of_lading||null,vessel:d.vessel||null,arrival_port:d.arrival_port||null,eta:d.eta||null,product:d.product||null,quantity_kg:Number(d.quantity_ton||0)*1000,status:d.status||null,notes:(d.notes||'')+cargoMarker+JSON.stringify(cargoItems)};
     const labels={reference:'Reference',acid_number:'IEC Number',acid_expiry:'ACID Expiry',bill_of_lading:'Bill of Lading',vessel:'Vessel',arrival_port:'Arrival Port',eta:'ETA',product:'Product',quantity_kg:'Quantity (ton)',status:'Status',notes:'Notes / Cargo lots'};
-    const changes=Object.keys(payload).filter(k=>String(activeShipmentDetail[k]??'')!==String(payload[k]??'')).map(k=>({field:labels[k]||k,from:activeShipmentDetail[k]??'',to:payload[k]??''}));
+    payload.details={...(activeShipmentDetail.details||{}),exporter:d.exporter||'',importer:d.importer||'',originPort:d.origin_port||'',unitPrice:Number(d.unit_price||0),totalAmount:Number(d.total_amount||0),status:d.status||'Pending',tasks:d.tasks||'',cargoItems};
+    const changes=Object.keys(payload).filter(k=>JSON.stringify(activeShipmentDetail[k]??'')!==JSON.stringify(payload[k]??'')).map(k=>({field:k==='details'?'Parties / Commercial values':labels[k]||k,from:k==='details'?'Previous values':activeShipmentDetail[k]??'',to:k==='details'?'Updated values':payload[k]??''}));
     if(!changes.length){notify('No changes to save');return;}
     const {error}=await db.from('shipments').update(payload).eq('id',activeShipmentDetail.id);
     if(error){notify(`Could not update shipment: ${error.message}`);return;}
