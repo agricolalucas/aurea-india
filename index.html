@@ -1426,12 +1426,14 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
 
   async function applySession(session){
     if(!session){window.indiaProfiles?.clear();gate.classList.remove('hidden');loginCard.classList.remove('hidden');forgotCard.classList.add('hidden');recoveryCard.classList.add('hidden');logoutBtn.style.display='none';sessionUser.textContent='';return;}
+    if(recoveryFlow){showRecovery();return;}
     try{
       const {data:member,error:membershipError}=await db.from('india_members').select('role').eq('user_id',session.user.id).maybeSingle();
       if(membershipError)throw membershipError;
       if(!member)throw Error('Your account has not been added to the India project. Ask an administrator to grant access.');
       await window.indiaProfiles.load();
       await loadShipments();
+      if(recoveryFlow){showRecovery();return;}
       gate.classList.add('hidden');logoutBtn.style.display='inline-block';sessionUser.textContent=session.user.email||'';
       authError.textContent='';
     }catch(err){gate.classList.remove('hidden');authError.textContent=err.message||'Could not load the India project.';}
@@ -1604,6 +1606,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     recoveryError.textContent = 'Saving new password…';
     const { error } = await db.auth.updateUser({ password: p1 });
     if (error) { recoveryError.textContent = error.message; return; }
+    recoveryFlow = false;
     await db.auth.signOut();
     history.replaceState({}, document.title, location.pathname);
     recoveryCard.classList.add('hidden');
@@ -1615,17 +1618,19 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
 
   const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
   const openingInvitation = hash.get('type') === 'invite';
+  let recoveryFlow = openingInvitation || hash.get('type') === 'recovery' || new URLSearchParams(location.search).get('type') === 'recovery';
   if (hash.get('error_code')) {
     authError.textContent = hash.get('error_description') || 'Recovery link is invalid or has expired. Request a new password recovery email.';
     history.replaceState({}, document.title, location.pathname);
   }
 
   db.auth.getSession().then(({data})=>{
-    if(openingInvitation && data.session) showRecovery();
+    if(recoveryFlow && data.session) showRecovery();
     else applySession(data.session);
   });
   db.auth.onAuthStateChange((event,session)=>{
-    if(event === 'PASSWORD_RECOVERY' || (openingInvitation && session)) { showRecovery(); return; }
+    if(event === 'PASSWORD_RECOVERY') recoveryFlow = true;
+    if(recoveryFlow && session) { showRecovery(); return; }
     if(!session) applySession(null);
   });
 })();
