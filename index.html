@@ -586,7 +586,7 @@ body{background:linear-gradient(145deg,#f5f8f5 0%,#edf3ef 100%);letter-spacing:-
 </div>
 <div class="modal" id="paymentModal" role="dialog" aria-modal="true"><div class="dialog"><div class="dialog-head"><div><h3>Record Payment</h3><span class="muted" id="paymentInvoiceLabel">Sales invoice</span></div><button class="close paymentClose" aria-label="Close">×</button></div><form id="paymentForm"><div class="form"><input type="hidden" name="invoice"><div class="field"><label>Payment date</label><input name="paymentDate" type="date" required></div><div class="field"><label>Payment amount (INR)</label><input name="paymentAmount" type="number" min="0.01" step="0.01" required></div><div class="field full"><label>Payment bank</label><input name="paymentBank" required placeholder="Enter bank name"></div><div class="field full"><label>Current balance</label><input id="paymentBalance" readonly></div></div><div class="dialog-foot"><button type="button" class="secondary paymentCancel">Cancel</button><button type="submit" class="primary">Save Payment</button></div></form></div></div>
 <div class="modal" id="profileModal" role="dialog" aria-modal="true"><div class="dialog wide"><div class="dialog-head"><div><h3>New User / Profile</h3><span class="muted">Create a reusable company, location or operational contact</span></div><button class="close profileClose" aria-label="Close">×</button></div><form id="profileForm"><input type="hidden" name="edit_company" value=""><div class="form"><div class="field full"><label>Company Logo — Invoice Header</label><input type="file" data-profile-attachment="logo" accept=".jpg,.jpeg,.png,.webp"><div class="attachment-actions"><span class="muted" data-attachment-name="logo">No file attached</span><button type="button" class="mini-btn" data-attachment-open="logo" hidden>View</button><button type="button" class="mini-btn" data-attachment-remove="logo" hidden>Remove</button></div></div><div class="field"><label>Profile type</label><select name="type" required><option>Administrator</option><option>Exporter</option><option>Importer</option><option>Notify</option><option>Consignee</option><option>Port / Terminal / Location</option><option>Fumigation Company</option></select></div><div class="field"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="field"><label>Company / Location name</label><input name="company" required></div><div class="field"><label>Country</label><input name="country" required></div><div class="field full"><label>Address</label><input name="address" required></div><div class="field"><label>Place of Supply / State</label><input name="place_supply" placeholder="e.g. Gujarat"></div><div class="field"><label>Tax ID / Registration</label><input name="taxId"></div><div class="profile-document"><div class="field"><label>GSTIN (India companies)</label><input name="gstin" maxlength="15" placeholder="15-character GSTIN"></div><div class="field"><label>Attachment — GSTIN (India companies)</label><input type="file" data-profile-attachment="gstin" accept=".pdf,.jpg,.jpeg,.png,.webp"><div class="attachment-actions"><span class="muted" data-attachment-name="gstin">No file attached</span><button type="button" class="mini-btn" data-attachment-open="gstin" hidden>View</button><button type="button" class="mini-btn" data-attachment-remove="gstin" hidden>Remove</button></div></div></div><div class="profile-document"><div class="field"><label>IEC Number (India importers / exporters)</label><input name="iec" placeholder="Importer Exporter Code"></div><div class="field"><label>Attachment — IEC Number (India importers / exporters)</label><input type="file" data-profile-attachment="iec" accept=".pdf,.jpg,.jpeg,.png,.webp"><div class="attachment-actions"><span class="muted" data-attachment-name="iec">No file attached</span><button type="button" class="mini-btn" data-attachment-open="iec" hidden>View</button><button type="button" class="mini-btn" data-attachment-remove="iec" hidden>Remove</button></div></div></div><div class="profile-document"><div class="field"><label>FSSAI Number</label><input name="fssai" placeholder="FSSAI licence number"></div><div class="field"><label>Attachment — FSSAI Number</label><input type="file" data-profile-attachment="fssai" accept=".pdf,.jpg,.jpeg,.png,.webp"><div class="attachment-actions"><span class="muted" data-attachment-name="fssai">No file attached</span><button type="button" class="mini-btn" data-attachment-open="fssai" hidden>View</button><button type="button" class="mini-btn" data-attachment-remove="fssai" hidden>Remove</button></div></div></div><div class="profile-document"><div class="field"><label>PAN Card Owner Number</label><input name="pan_owner" placeholder="Owner PAN"></div><div class="field"><label>Attachment — PAN Card Owner Number</label><input type="file" data-profile-attachment="pan_owner" accept=".pdf,.jpg,.jpeg,.png,.webp"><div class="attachment-actions"><span class="muted" data-attachment-name="pan_owner">No file attached</span><button type="button" class="mini-btn" data-attachment-open="pan_owner" hidden>View</button><button type="button" class="mini-btn" data-attachment-remove="pan_owner" hidden>Remove</button></div></div></div><div class="profile-document"><div class="field"><label>PAN Card Company Number</label><input name="pan_company" placeholder="Company PAN"></div><div class="field"><label>Attachment — PAN Card Company Number</label><input type="file" data-profile-attachment="pan_company" accept=".pdf,.jpg,.jpeg,.png,.webp"><div class="attachment-actions"><span class="muted" data-attachment-name="pan_company">No file attached</span><button type="button" class="mini-btn" data-attachment-open="pan_company" hidden>View</button><button type="button" class="mini-btn" data-attachment-remove="pan_company" hidden>Remove</button></div></div></div><div class="profile-document"><div class="field"><label>AD Bank Number</label><input name="ad_bank" placeholder="AD Code / Bank Number"></div><div class="field"><label>Attachment — AD Bank Number</label><input type="file" data-profile-attachment="ad_bank" accept=".pdf,.jpg,.jpeg,.png,.webp"><div class="attachment-actions"><span class="muted" data-attachment-name="ad_bank">No file attached</span><button type="button" class="mini-btn" data-attachment-open="ad_bank" hidden>View</button><button type="button" class="mini-btn" data-attachment-remove="ad_bank" hidden>Remove</button></div></div></div><div class="additional-pan-editor"><b>Additional PAN Cards</b><div id="additionalPanEntries"></div><button type="button" id="addPanCardBtn" class="secondary">+ Add PAN Card</button></div><div class="contacts-editor"><b>Contacts</b><div id="contactEntries"></div><button type="button" id="addContactBtn" class="secondary">+ Add Contact</button><input type="hidden" name="contact"><input type="hidden" name="phone"><input type="hidden" name="email"><input type="hidden" name="country_code"></div></div><div class="dialog-foot"><button type="button" class="secondary profileCancel">Cancel</button><button type="submit" class="primary">Create Profile</button></div></form></div></div>
-<div class="modal" id="shipmentDocumentsModal" role="dialog" aria-modal="true"><div class="dialog document-dialog"><div class="dialog-head"><div><h3 id="shipmentDocumentsTitle">Required Import Documents</h3><span class="muted">Attach each document separately. Uploaded PDFs remain available to open from this checklist.</span></div><button type="button" class="close" id="shipmentDocumentsClose" aria-label="Close">×</button></div><div class="document-overview"><div class="document-overview-item"><small>Shipment</small><b id="shipmentDocumentsRef">—</b></div><div class="document-overview-item"><small>Received</small><b id="shipmentDocumentsReceived">0 / 0</b></div><div class="document-overview-item"><small>Pending</small><b id="shipmentDocumentsPending">0</b></div></div><div class="document-checklist"><div class="document-checklist-head"><span>Required document</span><span>File / status</span><span style="text-align:right">Action</span></div><div id="shipmentDocumentsList"></div></div><div class="dialog-foot"><button type="button" class="secondary" id="shipmentDocumentsDone">Close</button></div></div></div>
+<div class="modal" id="shipmentDocumentsModal" role="dialog" aria-modal="true"><div class="dialog document-dialog"><div class="dialog-head"><div><h3 id="shipmentDocumentsTitle">Required Import Documents</h3><span class="muted">Add one or more PDFs for each required document. Saved files appear below with Open PDF buttons.</span></div><button type="button" class="close" id="shipmentDocumentsClose" aria-label="Close">×</button></div><div class="document-overview"><div class="document-overview-item"><small>Shipment</small><b id="shipmentDocumentsRef">—</b></div><div class="document-overview-item"><small>Received</small><b id="shipmentDocumentsReceived">0 / 0</b></div><div class="document-overview-item"><small>Pending</small><b id="shipmentDocumentsPending">0</b></div></div><div class="document-checklist"><div class="document-checklist-head"><span>Required document</span><span>File / status</span><span style="text-align:right">Action</span></div><div id="shipmentDocumentsList"></div></div><div class="dialog-foot"><button type="button" class="secondary" id="shipmentDocumentsDone">Close</button></div></div></div>
 <div class="toast" id="toast">Registro salvo com sucesso.</div>
 
 
@@ -816,11 +816,13 @@ function getShipmentsFromCargoTable(){
     {id:'bill_of_entry',name:'Bill of Entry',note:'Filed / assessed customs document'}
   ];
   function documentStorageKey(ref){return `aureaShipmentDocuments:${ref}`}
-  function getShipmentDocuments(ref){try{return JSON.parse(localStorage.getItem(documentStorageKey(ref))||'{}')}catch(e){return {}}}
+  function normalizeShipmentDocuments(docs){return Object.fromEntries(Object.entries(docs||{}).map(([key,value])=>[key,(Array.isArray(value)?value:[value]).filter(Boolean)]));}
+  function getShipmentDocuments(ref){const shipment=(window.loadedShipments||[]).find(x=>x.reference===ref);let local={};try{local=JSON.parse(localStorage.getItem(documentStorageKey(ref))||'{}')}catch(_){}const remote=shipment?.details?.requiredDocuments;return normalizeShipmentDocuments(remote??local);}
+
   function docEsc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
   function shipmentDocumentSummary(ref){
-    const uploaded=getShipmentDocuments(ref),received=INDIA_REQUIRED_DOCUMENTS.filter(doc=>uploaded[doc.id]).length;
-    const missing=INDIA_REQUIRED_DOCUMENTS.filter(doc=>!uploaded[doc.id]).map(doc=>doc.name);
+    const uploaded=getShipmentDocuments(ref),received=INDIA_REQUIRED_DOCUMENTS.filter(doc=>uploaded[doc.id]?.length).length;
+    const missing=INDIA_REQUIRED_DOCUMENTS.filter(doc=>!uploaded[doc.id]?.length).map(doc=>doc.name);
     return {received,missing,total:INDIA_REQUIRED_DOCUMENTS.length,percent:Math.round(received/INDIA_REQUIRED_DOCUMENTS.length*100)};
   }
   function documentSummaryHtml(ref){
@@ -869,8 +871,8 @@ function getShipmentsFromCargoTable(){
     document.getElementById('shipmentDocumentsReceived').textContent=`${summary.received} / ${summary.total}`;
     document.getElementById('shipmentDocumentsPending').textContent=String(summary.missing.length);
     document.getElementById('shipmentDocumentsList').innerHTML=INDIA_REQUIRED_DOCUMENTS.map((doc,index)=>{
-      const file=uploaded[doc.id];
-      return `<div class="document-check-row"><div class="document-name"><span class="document-icon">${String(index+1).padStart(2,'0')}</span><div><b>${docEsc(doc.name)}</b><small>${docEsc(doc.note)}</small></div></div><div class="document-file">${file?`<b>📄 ${docEsc(file.name)}</b><small>PDF received · ${docEsc(formatDocumentSize(file.size))} · ${docEsc(file.date||'')}</small>`:`<span class="status amber">Pending attachment</span><small>No PDF has been attached</small>`}</div><div class="document-actions">${file?`<button type="button" class="mini-btn pdf-open-btn" data-doc-open="${doc.id}">Open PDF</button>`:''}<label class="mini-btn">${file?'Replace':'Attach PDF'}<input type="file" accept="application/pdf,.pdf" data-doc-upload="${doc.id}"></label></div></div>`;
+      const files=uploaded[doc.id]||[];
+      return `<div class="document-check-row"><div class="document-name"><span class="document-icon">${String(index+1).padStart(2,'0')}</span><div><b>${docEsc(doc.name)}</b><small>${docEsc(doc.note)}</small></div></div><div class="document-file">${files.length?files.map((file,i)=>`<div style="margin-bottom:8px"><b>📄 ${docEsc(file.name)}</b><small>${docEsc(formatDocumentSize(file.size))} · ${docEsc(file.date||'')}</small><button type="button" class="mini-btn pdf-open-btn" data-doc-open="${doc.id}" data-doc-index="${i}">Open PDF</button></div>`).join(''):`<span class="status amber">Pending attachment</span><small>No PDF has been attached</small>`}</div><div class="document-actions"><label class="mini-btn">+ Add PDF<input type="file" multiple accept="application/pdf,.pdf" data-doc-upload="${doc.id}"></label></div></div>`;
     }).join('');
   }
   function openShipmentDocuments(ref){renderShipmentDocumentChecklist(ref);shipmentDocumentsModal.classList.add('open')}
@@ -878,19 +880,40 @@ function getShipmentsFromCargoTable(){
   document.getElementById('shipmentDocumentsClose').onclick=closeShipmentDocuments;
   document.getElementById('shipmentDocumentsDone').onclick=closeShipmentDocuments;
   shipmentDocumentsModal.onclick=e=>{if(e.target===shipmentDocumentsModal)closeShipmentDocuments()};
-  document.getElementById('shipmentDocumentsList').onchange=e=>{
-    const input=e.target.closest('[data-doc-upload]');if(!input||!input.files?.[0]||!activeDocumentShipment)return;
-    const file=input.files[0];
-    if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){notify('Please attach a PDF file');input.value='';return}
-    if(file.size>2500000){notify('PDF must be smaller than 2.5 MB in this prototype');input.value='';return}
-    const reader=new FileReader();
-    reader.onload=()=>{const docs=getShipmentDocuments(activeDocumentShipment);docs[input.dataset.docUpload]={name:file.name,size:file.size,date:new Date().toLocaleDateString('en-GB'),dataUrl:reader.result};try{localStorage.setItem(documentStorageKey(activeDocumentShipment),JSON.stringify(docs))}catch(err){notify('Storage is full. Use a smaller PDF.');return}renderShipmentDocumentChecklist(activeDocumentShipment);syncImportDocumentShipments();notify(`${file.name} attached successfully`)};
-    reader.readAsDataURL(file);
+  let requiredDocumentsUploading=false;
+  let shipmentDetailsSaveQueue=Promise.resolve();
+  document.getElementById('shipmentDocumentsList').onchange=async e=>{
+    const input=e.target.closest('[data-doc-upload]');if(!input?.files?.length||!activeDocumentShipment)return;
+    if(requiredDocumentsUploading){notify('Wait for the current upload to finish');input.value='';return;}
+    const ref=activeDocumentShipment,docId=input.dataset.docUpload,files=[...input.files];
+    if(files.some(f=>f.type!=='application/pdf'&&!f.name.toLowerCase().endsWith('.pdf'))){notify('Please attach PDF files');input.value='';return;}
+    if(files.some(f=>f.size>10*1024*1024)){notify('Each PDF must be 10 MB or smaller');input.value='';return;}
+    const shipment=(window.loadedShipments||[]).find(x=>x.reference===ref);if(!shipment?.id){notify('Select a shipment saved in Supabase');return;}
+    requiredDocumentsUploading=true;input.disabled=true;notify('Saving PDFs...');
+    try{
+      for(const file of files){
+        const path=`required-documents/${shipment.id}/${docId}/${crypto.randomUUID()}.pdf`;
+        const {error:uploadError}=await window.indiaDb.storage.from('india-profile-documents').upload(path,file,{contentType:'application/pdf',upsert:false});if(uploadError)throw uploadError;
+        await (shipmentDetailsSaveQueue=shipmentDetailsSaveQueue.catch(()=>{}).then(async()=>{
+          const {data:current,error:readError}=await window.indiaDb.from('shipments').select('details').eq('id',shipment.id).single();if(readError)throw readError;
+          const details=current.details||{},docs=normalizeShipmentDocuments(details.requiredDocuments??getShipmentDocuments(ref));
+          docs[docId]=[...(docs[docId]||[]),{name:file.name,size:file.size,date:new Date().toLocaleDateString('en-GB'),path}];
+          const {data:updated,error}=await window.indiaDb.from('shipments').update({details:{...details,requiredDocuments:docs}}).eq('id',shipment.id).select('details').single();if(error)throw error;
+          shipment.details=updated.details;try{localStorage.setItem(documentStorageKey(ref),JSON.stringify(docs))}catch(_){}
+        }));
+        if(activeDocumentShipment===ref)renderShipmentDocumentChecklist(ref);syncImportDocumentShipments();
+      }
+      notify(`${files.length} PDF(s) saved in Supabase`);
+    }catch(err){notify('Could not save PDF: '+err.message)}finally{requiredDocumentsUploading=false;input.disabled=false;input.value='';}
   };
-  document.getElementById('shipmentDocumentsList').onclick=e=>{
+  document.getElementById('shipmentDocumentsList').onclick=async e=>{
     const btn=e.target.closest('[data-doc-open]');if(!btn||!activeDocumentShipment)return;
-    const file=getShipmentDocuments(activeDocumentShipment)[btn.dataset.docOpen];
-    if(file?.dataUrl)window.open(file.dataUrl,'_blank','noopener');
+    const file=getShipmentDocuments(activeDocumentShipment)[btn.dataset.docOpen]?.[Number(btn.dataset.docIndex||0)];if(!file)return;
+    const tab=window.open('about:blank','_blank');if(!tab){notify('Allow pop-ups to open PDF');return;}
+    try{if(file.path){const {data,error}=await window.indiaDb.storage.from('india-profile-documents').createSignedUrl(file.path,300);if(error)throw error;tab.location.href=data.signedUrl;}
+      else if(file.dataUrl){const [header,encoded]=file.dataUrl.split(','),binary=atob(encoded),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));tab.location.href=url;setTimeout(()=>URL.revokeObjectURL(url),60000);}
+      else throw Error('PDF file is unavailable');
+    }catch(err){tab.close();notify('Could not open PDF: '+err.message)}
   };
   document.getElementById('importFileList').onclick=e=>{
     const item=e.target.closest('.file-item');if(!item)return;
@@ -1794,7 +1817,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
       return selectedShipment?.querySelector('b')?.textContent?.trim()||'default';
     }
     function key(){return 'aureaImportDocFields:'+ref()}
-    let documentSaveQueue=Promise.resolve();
+
     function save(){
       const shipment=(window.loadedShipments||[]).find(x=>x.reference===ref());
       const data={};
@@ -1802,7 +1825,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
         data[el.dataset.docField]=el.type==='file'?(el.files?.[0]?.name||el.dataset.savedFile||''):el.value;
       });
       localStorage.setItem(key(),JSON.stringify(data));
-      if(shipment&&window.indiaDb){documentSaveQueue=documentSaveQueue.then(async()=>{const details={...(shipment.details||{}),documentFields:data};const {data:updated,error}=await window.indiaDb.from('shipments').update({details}).eq('id',shipment.id).select('details').single();if(error){notify('Could not save document fields: '+error.message);return;}shipment.details=updated.details;syncImportDocumentShipments();}).catch(err=>notify('Could not save document fields: '+err.message));}
+      if(shipment&&window.indiaDb){shipmentDetailsSaveQueue=shipmentDetailsSaveQueue.then(async()=>{const details={...(shipment.details||{}),documentFields:data};const {data:updated,error}=await window.indiaDb.from('shipments').update({details}).eq('id',shipment.id).select('details').single();if(error){notify('Could not save document fields: '+error.message);return;}shipment.details=updated.details;syncImportDocumentShipments();}).catch(err=>notify('Could not save document fields: '+err.message));}
       if(typeof syncImportDocumentShipments==='function')syncImportDocumentShipments();
     }
     function load(){
