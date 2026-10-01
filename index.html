@@ -1569,6 +1569,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
       if(membershipError)throw membershipError;
       if(!member)throw Error('Your account has not been added to the India project. Ask an administrator to grant access.');
       await window.indiaProfiles.load();
+      await window.indiaBanks.load();
       await loadShipments();
       await loadSalesInvoices();
       if(recoveryFlow){showRecovery();return;}
@@ -2289,7 +2290,11 @@ document.getElementById('expenseAddBank')?.addEventListener('click',()=>{
   function loadBanks(){
     try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch(_){return []}
   }
-  function saveBanks(list){localStorage.setItem(STORAGE_KEY,JSON.stringify(list));}
+  function saveBanks(list){localStorage.setItem(STORAGE_KEY,JSON.stringify(list));refreshBankOptions();}
+  function refreshBankOptions(){for(const id of ['saleForm','editSaleForm']){const f=document.getElementById(id);if(f?.elements.bankId&&window.indiaInvoice)window.indiaInvoice.fillBank(f,f.elements.bankId.value);}document.dispatchEvent(new Event('india-banks-updated'));}
+  async function loadRemoteBanks(){const {data,error}=await window.indiaDb.from('india_banks').select('*').order('bank_name');if(error)throw error;const remote=(data||[]).map(r=>({...r.details,id:r.details?.id||r.id,remoteId:r.id,bank:r.bank_name,beneficiary_name:r.beneficiary_name,account_number:r.account_number,swift:r.swift,ifsc:r.ifsc,status:r.status}));const local=loadBanks().filter(x=>!x.remoteId&&!remote.some(r=>r.id===x.id));saveBanks([...remote,...local]);renderBanks();}
+  async function persistBank(d,existing){const payload={bank_name:d.bank,beneficiary_name:d.beneficiary_name,account_number:d.account_number||null,swift:d.swift||null,ifsc:d.ifsc||null,status:d.status||'Active',details:d};const query=existing?.remoteId?window.indiaDb.from('india_banks').update(payload).eq('id',existing.remoteId):window.indiaDb.from('india_banks').insert(payload);const {data,error}=await query.select('id').single();if(error)throw error;return {...d,remoteId:data.id};}
+  window.indiaBanks={load:loadRemoteBanks};
 
   function esc(v){
     return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -2340,22 +2345,13 @@ document.getElementById('expenseAddBank')?.addEventListener('click',()=>{
   document.getElementById('cancelBankProfile')?.addEventListener('click',closeBank);
   modal?.addEventListener('click',e=>{if(e.target===modal)closeBank();});
 
-  form?.addEventListener('submit',e=>{
-    e.preventDefault();
-    const d=Object.fromEntries(new FormData(form));
-    let list=loadBanks();
-    if(d.edit_id){
-      list=list.map(x=>x.id===d.edit_id?{...x,...d}:x);
-    }else{
-      d.id='BANK-'+Date.now();
-      list.unshift(d);
-    }
-    saveBanks(list);
-    renderBanks();
-    closeBank();
+  form?.addEventListener('submit',async e=>{
+    e.preventDefault();if(form.dataset.saving)return;form.dataset.saving='true';const submit=form.querySelector('[type="submit"]');submit.disabled=true;
+    try{const d=Object.fromEntries(new FormData(form)),list=loadBanks(),existing=list.find(x=>x.id===d.edit_id);d.id=existing?.id||crypto.randomUUID();const saved=await persistBank(d,existing);saveBanks([saved,...list.filter(x=>x.id!==saved.id)]);renderBanks();closeBank();notify('Bank saved in Supabase and available in Payment Bank');}
+    catch(err){notify('Could not save bank: '+err.message)}finally{delete form.dataset.saving;submit.disabled=false;}
   });
 
-  tbody?.addEventListener('click',e=>{
+  tbody?.addEventListener('click',async e=>{
     const tr=e.target.closest('tr[data-bank-id]');
     if(!tr) return;
     const id=tr.dataset.bankId;
@@ -2365,6 +2361,7 @@ document.getElementById('expenseAddBank')?.addEventListener('click',()=>{
     }
     if(e.target.closest('.delete-bank-profile')){
       if(confirm('Delete this bank registration?')){
+        const item=list.find(x=>x.id===id);if(item?.remoteId){const {data,error}=await window.indiaDb.from('india_banks').delete().eq('id',item.remoteId).select('id');if(error||!data?.length){notify('Could not delete bank: '+(error?.message||'Administrator access required'));return;}}
         saveBanks(list.filter(x=>x.id!==id));
         renderBanks();
       }
@@ -2613,12 +2610,14 @@ document.getElementById('expenseAddBank')?.addEventListener('click',()=>{
   let totalAll=0,paidAll=0,inrAll=0;all.forEach(o=>{totalAll+=o.total;paidAll+=paidFor(o.ref)});getPayments().forEach(x=>inrAll+=Number(x.convertedInr||0));
   document.getElementById('orderFinanceTotal').textContent=usd(totalAll);document.getElementById('orderFinancePaid').textContent=usd(paidAll);document.getElementById('orderFinanceBalance').textContent=usd(Math.max(0,totalAll-paidAll));document.getElementById('orderFinanceInr').textContent=inr(inrAll);
   const filtered=all.filter(o=>{const paid=paidFor(o.ref),balance=Math.max(0,o.total-paid),status=balance<=.005?'paid':paid>0?'partial':'open';return(!q||`${o.ref} ${o.importer} ${o.exporter}`.toLowerCase().includes(q))&&(!filter||filter===status)});
-  tableBody.innerHTML=filtered.length?filtered.map(o=>{const paid=paidFor(o.ref),balance=Math.max(0,o.total-paid),status=balance<=.005?'Paid':paid>0?'Partially Paid':'Open',cls=status==='Paid'?'':status==='Partially Paid'?'blue':'amber',count=getPayments().filter(x=>x.orderRef===o.ref).length;return `<tr data-finance-ref="${esc(o.ref)}"><td><span class="finance-order">${esc(o.ref)}</span></td><td>${esc(o.importer)}</td><td>${esc(o.exporter)}</td><td>${usd(o.unit)} / MT</td><td>${o.quantityMt.toLocaleString('en-US',{maximumFractionDigits:3})} MT</td><td><b>${usd(o.total)}</b></td><td class="finance-paid">${usd(paid)}</td><td class="finance-balance">${usd(balance)}</td><td><span class="status ${cls}">${status}</span><br><span class="muted">${count} payment${count===1?'':'s'}</span></td><td><button type="button" class="primary order-pay-btn" style="padding:8px 11px">Register Payment</button></td></tr>`}).join(''):'<tr><td colspan="10" class="muted" style="text-align:center;padding:24px">No orders found.</td></tr>';
+  tableBody.innerHTML=filtered.length?filtered.map(o=>{const paid=paidFor(o.ref),balance=Math.max(0,o.total-paid),status=balance<=.005?'Paid':paid>0?'Partially Paid':'Open',cls=status==='Paid'?'':status==='Partially Paid'?'blue':'amber',count=getPayments().filter(x=>x.orderRef===o.ref).length;return `<tr data-finance-ref="${esc(o.ref)}"><td><span class="finance-order">${esc(o.ref)}</span></td><td>${esc(o.importer)}</td><td>${esc(o.exporter)}</td><td>${usd(o.unit)} / MT</td><td>${o.quantityMt.toLocaleString('en-US',{maximumFractionDigits:3})} MT</td><td><b>${usd(o.total)}</b></td><td class="finance-paid"><button type="button" class="mini-btn order-payment-history" aria-expanded="false">${usd(paid)}<br><small>View payments (${count})</small></button></td><td class="finance-balance">${usd(balance)}</td><td><span class="status ${cls}">${status}</span><br><span class="muted">${count} payment${count===1?'':'s'}</span></td><td><button type="button" class="primary order-pay-btn" style="padding:8px 11px">Register Payment</button></td></tr>`}).join(''):'<tr><td colspan="10" class="muted" style="text-align:center;padding:24px">No orders found.</td></tr>';
  }
  function syncBanks(){const sel=document.getElementById('orderPaymentBankList');if(!sel)return;let banks=[];try{banks=JSON.parse(localStorage.getItem('aurea:bankProfiles')||'[]')}catch(_){}banks=banks.filter(x=>x.status!=='Inactive');sel.innerHTML='<option value="">Select registered bank...</option>'+banks.map(x=>{const label=[x.bank,x.beneficiary_name,x.account_number?`A/C ${x.account_number}`:'',x.swift||x.ifsc||''].filter(Boolean).join(' · ');return `<option value="${esc(label)}">${esc(label)}</option>`}).join('');const help=document.getElementById('orderPaymentBankHelp');if(help)help.textContent=banks.length?`${banks.length} active bank${banks.length===1?'':'s'} available.`:'No bank registered. Use + Bank to create one.'}
+ document.addEventListener('india-banks-updated',()=>{const sel=document.getElementById('orderPaymentBankList'),selected=sel?.value;syncBanks();if(selected)sel.value=selected;});
  function recalc(){if(!form)return;const amount=num(form.amountUsd.value),rate=num(form.usdInrRate.value),converted=amount*rate,total=num(form.dataset.orderTotal),previous=num(form.dataset.previouslyPaid);form.convertedInr.value=converted.toFixed(2);document.getElementById('orderPayNow').textContent=usd(amount);document.getElementById('orderPayAfter').textContent=usd(Math.max(0,total-previous-amount))}
  tabs.forEach(tab=>tab.addEventListener('click',()=>{tabs.forEach(x=>x.classList.toggle('active',x===tab));const financial=tab.dataset.cargoTab==='financial';shipPanel.classList.toggle('active',!financial);financePanel.classList.toggle('active',financial);if(financial)render()}));
- tableBody?.addEventListener('click',e=>{const btn=e.target.closest('.order-pay-btn');if(!btn)return;const ref=btn.closest('tr').dataset.financeRef,o=orders().find(x=>x.ref===ref);if(!o)return;const previous=paidFor(ref),balance=Math.max(0,o.total-previous);if(balance<=.005){notify('This order is already fully paid');return}syncBanks();form.reset();form.orderRef.value=ref;form.orderDisplay.value=`${ref} · ${o.importer}`;form.paymentDate.value=new Date().toISOString().slice(0,10);form.amountUsd.max=String(balance);form.dataset.orderTotal=String(o.total);form.dataset.previouslyPaid=String(previous);document.getElementById('orderPaymentLabel').textContent=`${ref} · Balance ${usd(balance)}`;document.getElementById('orderPayTotal').textContent=usd(o.total);document.getElementById('orderPayPreviously').textContent=usd(previous);recalc();modal.classList.add('open')});
+ function paymentHistoryHtml(ref){const payments=getPayments().filter(x=>x.orderRef===ref);return `<td colspan="10" style="padding:16px;background:#f5f8f8"><b>Payment entries · ${esc(ref)}</b>${payments.length?`<div style="overflow:auto;margin-top:10px"><table class="data-table"><thead><tr><th>Date</th><th>Bank</th><th>Transaction Reference</th><th>Payment (USD)</th><th>USD / INR</th><th>Converted (INR)</th><th>Notes</th></tr></thead><tbody>${payments.map(p=>`<tr><td>${esc(p.paymentDate||'—')}</td><td>${esc(p.bank||'—')}</td><td>${esc(p.bankReference||'—')}</td><td>${usd(p.amountUsd)}</td><td>${Number(p.usdInrRate||0).toLocaleString('en-US',{maximumFractionDigits:4})}</td><td>${inr(p.convertedInr)}</td><td>${esc(p.notes||'—')}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3"><b>Total paid</b></td><td><b>${usd(payments.reduce((n,p)=>n+Number(p.amountUsd||0),0))}</b></td><td></td><td><b>${inr(payments.reduce((n,p)=>n+Number(p.convertedInr||0),0))}</b></td><td></td></tr></tfoot></table></div>`:'<p class="muted">No payment recorded for this order.</p>'}</td>`;}
+ tableBody?.addEventListener('click',e=>{const history=e.target.closest('.order-payment-history');if(history){const row=history.closest('tr'),next=row.nextElementSibling;if(next?.classList.contains('order-payment-details')){next.remove();history.setAttribute('aria-expanded','false');return;}const details=document.createElement('tr');details.className='order-payment-details';details.innerHTML=paymentHistoryHtml(row.dataset.financeRef);row.after(details);history.setAttribute('aria-expanded','true');return;}const btn=e.target.closest('.order-pay-btn');if(!btn)return;const ref=btn.closest('tr').dataset.financeRef,o=orders().find(x=>x.ref===ref);if(!o)return;const previous=paidFor(ref),balance=Math.max(0,o.total-previous);if(balance<=.005){notify('This order is already fully paid');return}syncBanks();form.reset();form.orderRef.value=ref;form.orderDisplay.value=`${ref} · ${o.importer}`;form.paymentDate.value=new Date().toISOString().slice(0,10);form.amountUsd.max=String(balance);form.dataset.orderTotal=String(o.total);form.dataset.previouslyPaid=String(previous);document.getElementById('orderPaymentLabel').textContent=`${ref} · Balance ${usd(balance)}`;document.getElementById('orderPayTotal').textContent=usd(o.total);document.getElementById('orderPayPreviously').textContent=usd(previous);recalc();modal.classList.add('open')});
  document.querySelectorAll('.orderPaymentClose').forEach(x=>x.addEventListener('click',()=>modal.classList.remove('open')));
  document.getElementById('orderPaymentAddBank')?.addEventListener('click',()=>{modal.classList.remove('open');document.querySelector('.nav button[data-view="profiles"]')?.click();setTimeout(()=>{document.querySelector('.profile-subtab[data-profile-tab="bank"]')?.click();document.getElementById('addBankBtn')?.click()},80);notify('Register the bank, then return to the order payment screen.')});
  document.getElementById('orderPaymentUsd')?.addEventListener('input',recalc);document.getElementById('orderPaymentRate')?.addEventListener('input',recalc);
