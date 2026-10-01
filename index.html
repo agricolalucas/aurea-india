@@ -1207,17 +1207,49 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
   }
   document.getElementById('saleLot').onchange=updateSaleStock;
   document.getElementById('saleQuantity').oninput=updateSaleStock;
-  document.getElementById('saleForm').onsubmit=e=>{
+  function cacheSalesInvoice(d){localStorage.setItem('sale:'+d.invoice,JSON.stringify(d));localStorage.setItem('payments:'+d.invoice,JSON.stringify(d.payments||[]));}
+  async function saveSalesInvoice(d,existingId){
+    const payments=d.payments||JSON.parse(localStorage.getItem('payments:'+d.invoice)||'[]');
+    const bankSnapshot=(JSON.parse(localStorage.getItem('aurea:bankProfiles')||'[]').find(b=>b.id===d.bankId))||d.bankSnapshot;
+    const details={...d,payments,bankSnapshot};delete details.remoteId;
+    const shipment=(window.loadedShipments||[]).find(x=>x.reference===d.reference);
+    const payload={invoice_number:d.invoice,buyer_company:d.buyer||'',shipment_id:shipment?.id||null,invoice_date:d.date||null,quantity_kg:Number(d.quantity||0),amount_inr:Number(d.total||0),paid_inr:Number(d.paid||0),status:Number(d.paid||0)>=Number(d.total||0)?'Paid':'Receivable',details};
+    const query=existingId?window.indiaDb.from('india_sales_invoices').update(payload).eq('id',existingId):window.indiaDb.from('india_sales_invoices').insert(payload);
+    const {data,error}=await query.select().single();if(error)throw error;
+    const saved={...details,remoteId:data.id};cacheSalesInvoice(saved);return saved;
+  }
+  async function loadSalesInvoices(){
+    const {data,error}=await window.indiaDb.from('india_sales_invoices').select('*').order('created_at',{ascending:false});if(error)throw error;
+    const records=data.map(r=>({...r.details,remoteId:r.id,invoice:r.invoice_number,buyer:r.buyer_company,date:r.invoice_date,quantity:r.quantity_kg,total:r.amount_inr,paid:r.paid_inr,payment:r.status}));
+    const known=new Set(records.map(d=>d.invoice)),keys=[];for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key?.startsWith('sale:'))keys.push(key)}
+    for(const key of keys){let d;try{d=JSON.parse(localStorage.getItem(key))}catch(_){continue}if(!d?.invoice||known.has(d.invoice))continue;
+      if(d.remoteId){localStorage.removeItem(key);localStorage.removeItem('payments:'+d.invoice);continue;}
+      if(Number(d.quantity)>0){try{const saved=await saveSalesInvoice(d);records.push(saved);known.add(d.invoice)}catch(err){notify('Could not sync saved invoice '+d.invoice+': '+err.message);throw err}}
+    }
+    const body=document.querySelector('#salesTable tbody');body.replaceChildren();records.forEach(d=>{cacheSalesInvoice(d);body.append(salesInvoiceRow(d));});
+    renderInventory();syncSalesShipmentOptions();updateSalesReceivable();updateSalesVolume30();updateSalesInvoicedMonth();
+  }
+  function salesInvoiceRow(d){
+    const qty=Number(d.quantity||0),total=Number(d.total??qty*Number(d.unitPrice||0)),paid=Number(d.paid||0);
+    const tr=document.createElement('tr');
+    Object.assign(tr.dataset,{remoteId:d.remoteId||'',hsn:d.hsn,igstRate:d.igstRate,bankId:d.bankId,invoice:d.invoice,date:d.date,buyer:d.buyer,product:d.product,lot:d.lot,reference:d.reference,quantity:String(qty),unitPrice:d.unitPrice,plateTruck:d.plateTruck||'',loadingWarehouse:d.loadingWarehouse||'',truckStatus:d.truckStatus||'To be loaded',total:String(total),paid:String(paid),seller:d.seller,dueDate:d.dueDate||''});
+    tr.innerHTML=`<td><span class="ref-link">${safe(d.invoice)}</span></td><td>${safe(d.date)}</td><td>${safe(d.buyer)}</td><td>${safe(d.product)} · ${safe(d.lot||'—')}<br><span class="muted">${safe(d.reference)}</span></td><td>${qty.toLocaleString('en-US')} kg</td><td class="invoice-total">INR ${money(total)}</td><td><span class="status ${paid<total?'amber':''} payment-status">${paid>=total?'Paid':d.payment}</span></td><td class="current-balance">INR ${money(total-paid)}</td><td><button class="mini-btn edit-sale" type="button">Edit</button> <button class="mini-btn payment-btn">Payment</button> <button class="mini-btn pdf-btn">Invoice PDF</button> <button class="mini-btn loaded-order-pdf" type="button">Loaded Order PDF</button> <button class="mini-btn delete-sale" type="button">Delete</button></td>`;
+    return tr;
+  }
+  function restoreSalesInvoices(){
+    const body=document.querySelector('#salesTable tbody'),saved=[];
+    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(!key?.startsWith('sale:'))continue;try{const d=JSON.parse(localStorage.getItem(key));if(d&&d.invoice&&Number(d.quantity)>0)saved.push(d)}catch(err){console.warn('Invalid saved sales invoice',key)}}
+    const existing=new Set([...body.querySelectorAll('tr[data-invoice]')].map(r=>r.dataset.invoice));
+    saved.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.invoice).localeCompare(String(a.invoice),undefined,{numeric:true})).forEach(d=>{if(!existing.has(d.invoice)){body.append(salesInvoiceRow(d));existing.add(d.invoice)}});
+  }
+  document.getElementById('saleForm').onsubmit=async e=>{
     e.preventDefault();
     const d=Object.fromEntries(new FormData(e.target)),stock=selectedStock(),qty=Number(d.quantity),available=Number(stock?.available||0);
     if(!stock||qty>available){notify(`Insufficient stock. Available: ${available.toLocaleString('en-US')} kg`);return}
     d.invoice=nextIndiaInvoiceNumber();
     const total=qty*Number(d.unitPrice),paid=d.payment==='Paid'?total:0;
-    const tr=document.createElement('tr');
-    Object.assign(tr.dataset,{hsn:d.hsn,igstRate:d.igstRate,bankId:d.bankId,invoice:d.invoice,date:d.date,buyer:d.buyer,product:stock.product,lot:stock.lot,reference:stock.reference,quantity:String(qty),unitPrice:d.unitPrice,plateTruck:d.plateTruck||'',loadingWarehouse:d.loadingWarehouse||'',truckStatus:d.truckStatus||'To be loaded',total:String(total),paid:String(paid),seller:d.seller,dueDate:d.dueDate||''});
-    tr.innerHTML=`<td><span class="ref-link">${safe(d.invoice)}</span></td><td>${safe(d.date)}</td><td>${safe(d.buyer)}</td><td>${safe(stock.product)} · ${safe(stock.lot||'—')}<br><span class="muted">${safe(stock.reference)}</span></td><td>${qty.toLocaleString('en-US')} kg</td><td class="invoice-total">INR ${money(total)}</td><td><span class="status ${paid<total?'amber':''} payment-status">${paid>=total?'Paid':d.payment}</span></td><td class="current-balance">INR ${money(total-paid)}</td><td><button class="mini-btn edit-sale" type="button">Edit</button> <button class="mini-btn payment-btn">Payment</button> <button class="mini-btn pdf-btn">Invoice PDF</button> <button class="mini-btn loaded-order-pdf" type="button">Loaded Order PDF</button> <button class="mini-btn delete-sale" type="button">Delete</button></td>`;
-    document.querySelector('#salesTable tbody').prepend(tr);
-    localStorage.setItem(`sale:${d.invoice}`,JSON.stringify({...d,product:stock.product,lot:stock.lot,reference:stock.reference,quantity:qty,total,paid}));
+    let saved;try{saved=await saveSalesInvoice({...d,product:stock.product,lot:stock.lot,reference:stock.reference,quantity:qty,total,paid});}catch(err){notify('Could not save invoice in Supabase: '+err.message);return;}
+    const tr=salesInvoiceRow(saved);document.querySelector('#salesTable tbody').prepend(tr);
     localStorage.setItem('india:invoiceSequence:FY2627/08',d.invoice.split('/').pop());
     toggleModal(saleModal,false);
     renderInventory();syncSalesShipmentOptions();updateSalesReceivable();updateSalesVolume30();updateSalesInvoicedMonth();
@@ -1300,7 +1332,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     toggleModal(editSaleModal,true);
   }
   document.querySelector('.editSaleClose').onclick=document.querySelector('.editSaleCancel').onclick=()=>toggleModal(editSaleModal,false);
-  document.getElementById('editSaleForm').onsubmit=e=>{
+  document.getElementById('editSaleForm').onsubmit=async e=>{
     e.preventDefault();
     const d=Object.fromEntries(new FormData(e.target));
     const row=[...document.querySelectorAll('#salesTable tbody tr')].find(r=>r.dataset.invoice===d.originalInvoice);
@@ -1311,6 +1343,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const maxQty=Math.max(0,received-soldOther);
     if(newQty>maxQty){notify(`Quantity exceeds available inventory. Maximum for this invoice: ${maxQty.toLocaleString('en-US')} kg`);return;}
     const oldInvoice=row.dataset.invoice,oldPaid=Number(row.dataset.paid||0),total=newQty*Number(d.unitPrice||0),paid=Math.min(oldPaid,total),balance=Math.max(0,total-paid);
+    try{await saveSalesInvoice({...JSON.parse(localStorage.getItem('sale:'+oldInvoice)||'{}'),...d,total,paid},row.dataset.remoteId);}catch(err){notify('Could not update invoice in Supabase: '+err.message);return;}
     Object.assign(row.dataset,{hsn:d.hsn,igstRate:d.igstRate,bankId:d.bankId,invoice:d.invoice,date:d.date,buyer:d.buyer,product:d.product,lot:d.lot,reference:d.reference,quantity:String(newQty),unitPrice:d.unitPrice,plateTruck:d.plateTruck||'',loadingWarehouse:d.loadingWarehouse||'',truckStatus:d.truckStatus||'To be loaded',total:String(total),paid:String(paid),seller:d.seller||'',dueDate:d.dueDate||''});
     const cells=row.children;
     cells[0].innerHTML=`<span class="ref-link">${safe(d.invoice)}</span>`;
@@ -1326,7 +1359,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
       localStorage.removeItem(`sale:${oldInvoice}`); localStorage.removeItem(`payments:${oldInvoice}`);
       if(oldPayments)localStorage.setItem(`payments:${d.invoice}`,oldPayments);
     }
-    localStorage.setItem(`sale:${d.invoice}`,JSON.stringify({...d,total,paid}));
+    localStorage.setItem(`sale:${d.invoice}`,JSON.stringify({...JSON.parse(localStorage.getItem(`sale:${d.invoice}`)||'{}'),...d,total,paid}));
     toggleModal(editSaleModal,false);
     renderInventory();syncSalesShipmentOptions();updateSalesReceivable();updateSalesVolume30();updateSalesInvoicedMonth();
     notify(`Sales invoice ${d.invoice} updated`);
@@ -1337,7 +1370,8 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const opening=Number(form.dataset.openingBalance||0),amount=Number(e.target.value||0);
     document.getElementById('paymentBalance').value=`INR ${money(Math.max(0,opening-amount))}`;
   });
-  document.getElementById('paymentForm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),row=[...document.querySelectorAll('#salesTable tbody tr')].find(r=>r.dataset.invoice===d.invoice),total=Number(row.dataset.total),oldPaid=Number(row.dataset.paid||0),amount=Number(d.paymentAmount),openingBalance=Math.max(0,total-oldPaid);if(amount>openingBalance){notify(`Payment exceeds the outstanding balance of INR ${money(openingBalance)}`);return}const paid=oldPaid+amount,currentBalance=Math.max(0,openingBalance-amount);row.dataset.paid=String(paid);const status=row.querySelector('.payment-status');status.textContent=currentBalance<=0?'Paid':'Receivable';status.className=`status payment-status${currentBalance>0?' amber':''}`;const balanceCell=row.querySelector('.current-balance');if(balanceCell)balanceCell.textContent=`INR ${money(currentBalance)}`;const payments=JSON.parse(localStorage.getItem(`payments:${d.invoice}`)||'[]');payments.push({...d,balanceAfter:currentBalance});localStorage.setItem(`payments:${d.invoice}`,JSON.stringify(payments));const savedSale=JSON.parse(localStorage.getItem(`sale:${d.invoice}`)||'{}');localStorage.setItem(`sale:${d.invoice}`,JSON.stringify({...savedSale,paid}));document.getElementById('paymentBalance').value=`INR ${money(currentBalance)}`;updateSalesReceivable();const wasExpanded=!!paymentDetailRow(row);if(wasExpanded){paymentDetailRow(row).remove();togglePaymentDetails(row);}toggleModal(paymentModal,false);notify(`Payment of INR ${money(amount)} recorded. Current balance: INR ${money(currentBalance)}`)};
+  document.getElementById('paymentForm').onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),row=[...document.querySelectorAll('#salesTable tbody tr')].find(r=>r.dataset.invoice===d.invoice),total=Number(row.dataset.total),oldPaid=Number(row.dataset.paid||0),amount=Number(d.paymentAmount),openingBalance=Math.max(0,total-oldPaid);if(amount>openingBalance){notify(`Payment exceeds the outstanding balance of INR ${money(openingBalance)}`);return}const paid=oldPaid+amount,currentBalance=Math.max(0,openingBalance-amount);const nextPayments=JSON.parse(localStorage.getItem('payments:'+d.invoice)||'[]');nextPayments.push({...d,balanceAfter:currentBalance});try{await saveSalesInvoice({...JSON.parse(localStorage.getItem('sale:'+d.invoice)||'{}'),...row.dataset,paid,payments:nextPayments},row.dataset.remoteId);}catch(err){notify('Could not save payment in Supabase: '+err.message);return;}row.dataset.paid=String(paid);const status=row.querySelector('.payment-status');status.textContent=currentBalance<=0?'Paid':'Receivable';status.className=`status payment-status${currentBalance>0?' amber':''}`;const balanceCell=row.querySelector('.current-balance');if(balanceCell)balanceCell.textContent=`INR ${money(currentBalance)}`;const payments=JSON.parse(localStorage.getItem(`payments:${d.invoice}`)||'[]');localStorage.setItem(`payments:${d.invoice}`,JSON.stringify(payments));const savedSale=JSON.parse(localStorage.getItem(`sale:${d.invoice}`)||'{}');localStorage.setItem(`sale:${d.invoice}`,JSON.stringify({...savedSale,paid}));document.getElementById('paymentBalance').value=`INR ${money(currentBalance)}`;updateSalesReceivable();const wasExpanded=!!paymentDetailRow(row);if(wasExpanded){paymentDetailRow(row).remove();togglePaymentDetails(row);}toggleModal(paymentModal,false);notify(`Payment of INR ${money(amount)} recorded. Current balance: INR ${money(currentBalance)}`)};
+  ['saleForm','editSaleForm','paymentForm'].forEach(id=>{const form=document.getElementById(id),handler=form.onsubmit;form.onsubmit=async e=>{e.preventDefault();if(form.dataset.saving==='true')return;form.dataset.saving='true';const buttons=[...form.querySelectorAll('[type="submit"]')];buttons.forEach(b=>b.disabled=true);try{await handler(e)}finally{delete form.dataset.saving;buttons.forEach(b=>b.disabled=false)}}});
   function paymentDetailRow(invoiceRow){
     const next=invoiceRow.nextElementSibling;
     return next&&next.classList.contains('sales-payment-detail')?next:null;
@@ -1364,7 +1398,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     detail.appendChild(td);row.after(detail);
   }
   function invoicePdf(row){window.indiaInvoice.open(row)}
-  document.getElementById('salesTable').onclick=e=>{
+  document.getElementById('salesTable').onclick=async e=>{
     const row=e.target.closest('tr');
     if(!row||!row.dataset.invoice)return;
     if(e.target.closest('.edit-sale')){openEditSale(row);return;}
@@ -1373,6 +1407,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     if(e.target.closest('.delete-sale')){
       const invoice=row.dataset.invoice||'this invoice';
       if(!confirm(`Delete sales invoice ${invoice}? This action cannot be undone.`))return;
+      if(row.dataset.remoteId){const {data,error}=await window.indiaDb.from('india_sales_invoices').delete().eq('id',row.dataset.remoteId).select('id');if(error||!data?.length){notify('Could not delete invoice: '+(error?.message||'Administrator access required'));return;}}
       localStorage.removeItem(`sale:${invoice}`);localStorage.removeItem(`payments:${invoice}`);
       const detail=paymentDetailRow(row);if(detail)detail.remove();
       row.remove();
@@ -1512,6 +1547,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
       if(!member)throw Error('Your account has not been added to the India project. Ask an administrator to grant access.');
       await window.indiaProfiles.load();
       await loadShipments();
+      await loadSalesInvoices();
       if(recoveryFlow){showRecovery();return;}
       gate.classList.add('hidden');logoutBtn.style.display='inline-block';sessionUser.textContent=session.user.email||'';
       authError.textContent='';
@@ -1721,6 +1757,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
 })();
 
 
+  restoreSalesInvoices();
   const salesTableBody=document.querySelector('#salesTable tbody');
   if(salesTableBody)new MutationObserver(()=>renderInventory()).observe(salesTableBody,{childList:true,subtree:true,attributes:true});
   renderReceivingTickets();
@@ -2493,6 +2530,7 @@ document.getElementById('expenseAddBank')?.addEventListener('click',()=>{
   <div style="height:24px"></div>
   <table class="details">
     <tr><th>Sales Invoice</th><td>${esc(row.dataset.invoice)}</td></tr>
+    <tr><th>Seller / Owner Cargo</th><td><b>${esc(seller.company||row.dataset.seller)}</b></td></tr>
     <tr><th>Buyer</th><td><b>${esc(row.dataset.buyer)}</b></td></tr>
     <tr><th>Product</th><td>${esc(row.dataset.product)}</td></tr>
     <tr><th>Shipment / Lot</th><td>${esc(row.dataset.reference)}${row.dataset.lot?' · '+esc(row.dataset.lot):''}</td></tr>
@@ -2612,7 +2650,7 @@ window.indiaInvoice=(()=>{
  function shipmentHs(reference){let fields={};try{fields=JSON.parse(localStorage.getItem('aureaImportDocFields:'+reference)||'{}')}catch(_){}const shipment=(window.loadedShipments||[]).find(x=>x.reference===reference);return String(shipment?.details?.documentFields?.['in-hs']??fields['in-hs']??'').trim()}
  function fillSeller(f,selected=''){const companies=[];document.querySelectorAll('#profileTable tbody tr[data-company]').forEach(row=>{const name=row.dataset.company;if(name&&!companies.includes(name))companies.push(name)});for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!k?.startsWith('profile:'))continue;try{const p=JSON.parse(localStorage.getItem(k));if(p?.company&&p.status!=='Inactive'&&!companies.includes(p.company))companies.push(p.company)}catch(_){}}f.elements.seller.innerHTML='<option value="">Select Seller from Users / Profiles...</option>'+companies.sort().map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('');if(selected)f.elements.seller.value=selected}
  function fillBank(f,selected=''){f.elements.bankId.innerHTML='<option value="">Select payment bank...</option>'+banks().map(b=>`<option value="${esc(b.id)}">${esc(b.bank)} · ${esc(b.beneficiary_name)} · ${esc(b.account_number)}</option>`).join('');f.elements.bankId.value=selected||''}
- async function open(row){let saved={},previous={};try{saved=JSON.parse(localStorage.getItem('sale:'+row.dataset.invoice)||'{}');previous=JSON.parse(localStorage.getItem('india:invoicePdf:'+row.dataset.invoice)||'{}')}catch(_){}const d={...saved,...row.dataset},settings={hsn:shipmentHs(d.reference),igstRate:d.igstRate??previous.igstRate??'0',truckPlate:d.plateTruck||'',bankId:d.bankId||previous.bankId||''};if(!settings.hsn){notify('Register HS Code in India Import Document Sequence');return}const bank=banks().find(b=>b.id===settings.bankId);if(!bank){notify('Edit this Sales Invoice and select Payment Bank');return}const w=window.open('about:blank','_blank');if(!w){notify('Allow pop-ups to view the invoice');return}try{const seller=profile(d.seller),buyer=profile(d.buyer),logo=await logoUrl(seller);w.document.write(html(d,seller,buyer,bank,logo,settings));w.document.close()}catch(err){w.close();notify('Could not generate invoice: '+err.message)}}
+ async function open(row){let saved={},previous={};try{saved=JSON.parse(localStorage.getItem('sale:'+row.dataset.invoice)||'{}');previous=JSON.parse(localStorage.getItem('india:invoicePdf:'+row.dataset.invoice)||'{}')}catch(_){}const d={...saved,...row.dataset},settings={hsn:shipmentHs(d.reference),igstRate:d.igstRate??previous.igstRate??'0',truckPlate:d.plateTruck||'',bankId:d.bankId||previous.bankId||''};if(!settings.hsn){notify('Register HS Code in India Import Document Sequence');return}const bank=banks().find(b=>b.id===settings.bankId)||d.bankSnapshot;if(!bank){notify('Edit this Sales Invoice and select Payment Bank');return}const w=window.open('about:blank','_blank');if(!w){notify('Allow pop-ups to view the invoice');return}try{const seller=profile(d.seller),buyer=profile(d.buyer),logo=await logoUrl(seller);w.document.write(html(d,seller,buyer,bank,logo,settings));w.document.close()}catch(err){w.close();notify('Could not generate invoice: '+err.message)}}
  async function logoUrl(seller){const m=seller.attachments?.logo;if(!m)return '';if(m.path){const r=await window.indiaDb.storage.from('india-profile-documents').createSignedUrl(m.path,300);if(r.error)throw r.error;return r.data.signedUrl}const blob=await window.profileAttachments.read(m.id);if(!blob)throw Error('Seller logo unavailable');return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob)})}
  function html(d,seller,buyer,bank,logo,settings){const taxable=Number(d.total||0),tax=Math.round(taxable*Number(settings.igstRate)/100*100)/100,total=taxable+tax;
  const detail=(label,value)=>`<div><b>${label}:</b> ${esc(value||'—')}</div>`;
