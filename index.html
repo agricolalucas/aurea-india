@@ -377,7 +377,7 @@ body{background:linear-gradient(145deg,#f5f8f5 0%,#edf3ef 100%);letter-spacing:-
 </section>
 
       <section class="view" id="vendas"><div class="intro"><div><h2>Notas de venda</h2><p>Faturamento local vinculado ao lote e saldo de estoque.</p></div><button class="primary" id="saleBtn">+ Nova nota de venda</button></div><div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="card kpi"><div class="kpi-head"><span id="salesInvoicedMonthLabel">Invoiced this month</span></div><b id="salesInvoicedMonthKpi">INR 0.00</b><span class="trend" id="salesInvoicedMonthInfo">0 invoices this month</span></div><div class="card kpi"><div class="kpi-head"><span>A receber</span></div><b id="salesReceivableKpi">INR 0.00</b><span class="trend warn" id="salesReceivableInfo">Open receivables</span></div><div class="card kpi"><div class="kpi-head"><span>Volume vendido</span></div><b id="salesVolume30Kpi">0 kg</b><span class="trend" id="salesVolume30Info">Last 30 days</span></div></div>
-        <div class="toolbar"><button class="secondary active" type="button" data-sales-tab="invoices">Invoices</button><button class="secondary" type="button" data-sales-tab="payments">Payments</button></div><div id="salesInvoicesPanel"><div class="toolbar sales-tools"><input id="salesBuyerFilter" placeholder="Filter by buyer name"><input id="salesProductFilter" placeholder="Filter by product / order"><select id="salesStatusFilter" aria-label="Payment status"><option value="pending">Pending</option><option value="all">All</option><option value="paid">Paid</option></select><input id="salesDateFrom" type="date" aria-label="From date"><input id="salesDateTo" type="date" aria-label="To date"><button type="button" class="secondary" id="salesSelectOrders">Select orders</button><button type="button" class="secondary" id="salesReportPdf">Report PDF</button><button type="button" class="secondary" id="salesReportExcel">Excel</button><button type="button" class="primary" id="ledgerSelectedPay" disabled>Record payment for selected invoices</button><div id="salesSelectedSummary" class="field full"></div><span id="salesSelectionInfo" class="sales-selection-info">0 selected</span></div><div class="card table-card"><table class="data-table" id="salesTable"><thead><tr><th>Select</th><th>Invoice</th><th>Date</th><th>Buyer</th><th>Product / Lot</th><th>Quantity</th><th>Total amount</th><th>Payment</th><th>Current balance</th><th>Action</th></tr></thead><tbody>
+        <div class="toolbar"><button class="secondary active" type="button" data-sales-tab="invoices">Invoices</button><button class="secondary" type="button" data-sales-tab="payments">Payments</button></div><div id="salesInvoicesPanel"><div class="toolbar sales-tools"><input id="salesBuyerFilter" placeholder="Filter by buyer name"><input id="salesProductFilter" placeholder="Filter by product / order"><select id="salesStatusFilter" aria-label="Payment status"><option value="pending">Pending</option><option value="all">All</option><option value="paid">Paid</option><option value="cancelled">Cancelled</option></select><input id="salesDateFrom" type="date" aria-label="From date"><input id="salesDateTo" type="date" aria-label="To date"><button type="button" class="secondary" id="salesSelectOrders">Select orders</button><button type="button" class="secondary" id="salesReportPdf">Report PDF</button><button type="button" class="secondary" id="salesReportExcel">Excel</button><button type="button" class="primary" id="ledgerSelectedPay" disabled>Record payment for selected invoices</button><div id="salesSelectedSummary" class="field full"></div><span id="salesSelectionInfo" class="sales-selection-info">0 selected</span></div><div class="card table-card"><table class="data-table" id="salesTable"><thead><tr><th>Select</th><th>Invoice</th><th>Date</th><th>Buyer</th><th>Product / Lot</th><th>Quantity</th><th>Total amount</th><th>Payment</th><th>Current balance</th><th>Action</th></tr></thead><tbody>
         </tbody></table></div></div><div id="salesPaymentsPanel" hidden><div class="toolbar"><input id="ledgerSearch" placeholder="Search buyer / description"><button type="button" class="primary" id="ledgerAddReceipt">+ Add Payment / Advance</button></div><div class="card table-card"><table class="data-table"><thead><tr><th>Order / Invoice</th><th>Payment date</th><th>Payment amount</th><th>Payment bank</th><th>Description</th><th>Current balance</th><th>Action</th></tr></thead><tbody id="salesPaymentsBody"></tbody></table></div></div></section>
 
       <section class="view" id="crm">
@@ -959,7 +959,7 @@ initImportStageTabs();
     };
   }
   function invoiceItems(d){if(Array.isArray(d.items)&&d.items.length)return d.items;try{const items=JSON.parse(d.items||'null');if(Array.isArray(items)&&items.length)return items;}catch(_){}return [{reference:d.reference,product:d.product,lot:d.lot,quantity:Number(d.quantity||0),unitPrice:Number(d.unitPrice||0),hsn:d.hsn||'',igstRate:Number(d.igstRate||0)}];}
-  function getLocalSoldWeight(ref){return [...document.querySelectorAll('#salesTable tbody tr[data-invoice]')].reduce((sum,row)=>sum+invoiceItems(row.dataset).filter(i=>i.reference===ref).reduce((n,i)=>n+Number(i.quantity||0),0),0);}
+  function getLocalSoldWeight(ref){return [...document.querySelectorAll('#salesTable tbody tr[data-invoice]')].filter(row=>row.dataset.cancelled!=='true').reduce((sum,row)=>sum+invoiceItems(row.dataset).filter(i=>i.reference===ref).reduce((n,i)=>n+Number(i.quantity||0),0),0);}
 
 
 
@@ -1174,10 +1174,10 @@ function fillBuyerSelect(el,current=''){
  if(current)el.value=current;
 }
 function nextIndiaInvoiceNumber(){
- const prefix='FY2627/08/',key='india:invoiceSequence:FY2627/08';
+ const prefix='FY2627/08/',key='india:invoiceSequence:v2:FY2627/08';
  let last=Math.max(9,Number(localStorage.getItem(key)||9)||9);
  const consider=value=>{const m=String(value||'').match(/^FY2627\/08\/(\d+)$/);if(m)last=Math.max(last,Number(m[1]))};
- document.querySelectorAll('#salesTable tbody tr[data-invoice]').forEach(row=>{consider(row.dataset.invoice);try{JSON.parse(row.dataset.previousInvoiceNumbers||'[]').forEach(consider)}catch{}});
+ document.querySelectorAll('#salesTable tbody tr[data-invoice]').forEach(row=>consider(row.dataset.invoice));
  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k?.startsWith('sale:'))consider(k.slice(5))}
  return prefix+(last+1);
 }
@@ -1233,7 +1233,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
   }
   document.getElementById('saleLot').onchange=updateSaleStock;
   document.getElementById('saleQuantity').oninput=updateSaleStock;
-  function stockForEdit(ref,invoice){return getReceivingTickets(ref).reduce((n,t)=>n+Number(t.weight||0),0)-[...document.querySelectorAll('#salesTable tbody tr[data-invoice]')].filter(r=>r.dataset.invoice!==invoice).reduce((n,r)=>n+invoiceItems(r.dataset).filter(i=>i.reference===ref).reduce((a,i)=>a+Number(i.quantity||0),0),0);}
+  function stockForEdit(ref,invoice){return getReceivingTickets(ref).reduce((n,t)=>n+Number(t.weight||0),0)-[...document.querySelectorAll('#salesTable tbody tr[data-invoice]')].filter(r=>r.dataset.invoice!==invoice&&r.dataset.cancelled!=='true').reduce((n,r)=>n+invoiceItems(r.dataset).filter(i=>i.reference===ref).reduce((a,i)=>a+Number(i.quantity||0),0),0);}
   function extraItem(f,item={}){const box=document.createElement('div');box.className='sales-extra-item';box.style.cssText='border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:12px';box.innerHTML='<b>Sales Item</b> <button type="button" class="mini-btn" data-remove-item>Remove</button><div class="form"><div class="field full"><label>Shipment</label><select data-item="reference" required></select></div><div class="field full"><label>Product</label><input data-item="product" readonly required></div><div class="field"><label>HSN / SAC</label><input data-item="hsn" required></div><div class="field"><label>IGST Rate (%)</label><input data-item="igstRate" type="number" min="0" max="100" step="0.01" value="0" required></div><div class="field"><label>Quantity (kg)</label><input data-item="quantity" type="number" min="0.001" step="0.001" required></div><div class="field"><label>Unit Price / kg</label><input data-item="unitPrice" type="number" min="0" step="0.01" required></div></div>';const sel=box.querySelector('select');sel.add(new Option('Select shipment with available inventory...',''));const refs=new Set([...document.querySelectorAll('#importFileList .file-item')].map(shipmentRefFromItem));if(item.reference)refs.add(item.reference);for(const ref of refs){const available=stockForEdit(ref,f.elements.originalInvoice?.value);if(available>0||ref===item.reference)sel.add(new Option(`${ref} · ${getCargoShipmentData(ref).product||''} · ${available.toLocaleString('en-US')} kg available`,ref));}for(const el of box.querySelectorAll('[data-item]'))el.value=item[el.dataset.item]??(el.dataset.item==='igstRate'?'0':'');box.dataset.lot=item.lot||'';sel.onchange=()=>{box.querySelector('[data-item="product"]').value=getCargoShipmentData(sel.value).product||'';box.querySelector('[data-item="hsn"]').value=window.indiaInvoice.shipmentHs(sel.value);box.dataset.lot=[...getReceivingTickets(sel.value)].reverse().find(t=>t.lot)?.lot||'';refreshSalesTotals(f);};box.querySelector('[data-remove-item]').onclick=()=>{box.remove();refreshSalesTotals(f);};f.querySelector('[data-extra-items]').append(box);refreshSalesTotals(f);}
   function collectSalesItems(f){const first={reference:f.elements.reference.value,product:f.elements.product.value,lot:[...getReceivingTickets(f.elements.reference.value)].reverse().find(t=>t.lot)?.lot||'',quantity:Number(f.elements.quantity.value),unitPrice:Number(f.elements.unitPrice.value),hsn:f.elements.hsn.value,igstRate:Number(f.elements.igstRate.value)};return [first,...[...f.querySelectorAll('.sales-extra-item')].map(box=>{const d={lot:box.dataset.lot||''};for(const el of box.querySelectorAll('[data-item]'))d[el.dataset.item]=['quantity','unitPrice','igstRate'].includes(el.dataset.item)?Number(el.value):el.value;return d;})];}
   function salesTotals(items){const round=v=>Math.round((v+Number.EPSILON)*100)/100;const taxable=round(items.reduce((n,i)=>n+round(i.quantity*i.unitPrice),0)),tax=round(items.reduce((n,i)=>n+round(round(i.quantity*i.unitPrice)*i.igstRate/100),0));return {taxable,tax,total:round(taxable+tax),quantity:items.reduce((n,i)=>n+i.quantity,0)};}
@@ -1246,7 +1246,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const bankSnapshot=(JSON.parse(localStorage.getItem('aurea:bankProfiles')||'[]').find(b=>b.id===d.bankId))||d.bankSnapshot;
     const details={...d,items:invoiceItems(d),payments,bankSnapshot};delete details.remoteId;
     const shipment=(window.loadedShipments||[]).find(x=>x.reference===d.reference);
-    const payload={currency:d.currency||'INR',invoice_number:d.invoice,buyer_company:d.buyer||'',shipment_id:shipment?.id||null,invoice_date:d.date||null,quantity_kg:Number(d.quantity||0),amount_inr:Number(d.total||0),paid_inr:Number(d.paid||0),status:Number(d.paid||0)>=Number(d.total||0)?'Paid':'Receivable',details};
+    const payload={currency:d.currency||'INR',invoice_number:d.invoice,buyer_company:d.buyer||'',shipment_id:shipment?.id||null,invoice_date:d.date||null,quantity_kg:Number(d.quantity||0),amount_inr:Number(d.total||0),paid_inr:Number(d.paid||0),status:d.cancelledAt?'Cancelled':Number(d.paid||0)>=Number(d.total||0)?'Paid':'Receivable',details};
     const query=existingId?window.indiaDb.from('india_sales_invoices').update(payload).eq('id',existingId):window.indiaDb.from('india_sales_invoices').insert(payload);
     const {data,error}=await query.select().single();if(error)throw error;
     const saved={...details,remoteId:data.id};cacheSalesInvoice(saved);return saved;
@@ -1266,8 +1266,8 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
   function salesInvoiceRow(d){
     const qty=Number(d.quantity||0),total=Number(d.total??qty*Number(d.unitPrice||0)),paid=Number(d.paid||0);
     const tr=document.createElement('tr');
-    Object.assign(tr.dataset,{previousInvoiceNumbers:JSON.stringify(d.previousInvoiceNumbers||[]),currency:d.currency||'INR',items:JSON.stringify(d.items||[]),remoteId:d.remoteId||'',hsn:d.hsn,igstRate:d.igstRate,bankId:d.bankId,invoice:d.invoice,date:d.date,buyer:d.buyer,product:d.product,lot:d.lot,reference:d.reference,quantity:String(qty),unitPrice:d.unitPrice,plateTruck:d.plateTruck||'',loadingWarehouse:d.loadingWarehouse||'',truckStatus:d.truckStatus||'To be loaded',total:String(total),paid:String(paid),seller:d.seller,dueDate:d.dueDate||''});
-    tr.innerHTML=`<td><input type="checkbox" class="invoice-select" aria-label="Select ${safe(d.invoice)}"></td><td><span class="ref-link">${safe(d.invoice)}</span></td><td>${safe(d.date)}</td><td>${safe(d.buyer)}</td><td>${invoiceItems(d).map(i=>`${safe(i.product)} · ${safe(i.lot||'—')}<br><span class="muted">${safe(i.reference)} · ${Number(i.quantity).toLocaleString('en-US')} kg</span>`).join('<br>')}</td><td>${qty.toLocaleString('en-US')} kg</td><td class="invoice-total">${safe(d.currency||'INR')} ${money(total)}</td><td><span class="status ${paid<total?'amber':''} payment-status">${paid>=total?'Paid':paid>0?'Partially Paid':'Pending'}</span></td><td class="current-balance">${safe(d.currency||'INR')} ${money(total-paid)}</td><td><details class="sales-actions"><summary aria-label="Actions for ${safe(d.invoice)}">⋯</summary><div class="sales-action-menu"><button class="mini-btn edit-sale" type="button">Edit</button> <button class="mini-btn payment-btn">Payment</button> <button class="mini-btn pdf-btn">Invoice PDF</button> <button class="mini-btn loaded-order-pdf" type="button">Loading Authorization PDF</button> <button class="mini-btn delete-sale" type="button">Delete</button></div></details></td>`;
+    Object.assign(tr.dataset,{cancelled:d.cancelledAt?'true':'false',previousInvoiceNumbers:JSON.stringify(d.previousInvoiceNumbers||[]),currency:d.currency||'INR',items:JSON.stringify(d.items||[]),remoteId:d.remoteId||'',hsn:d.hsn,igstRate:d.igstRate,bankId:d.bankId,invoice:d.invoice,date:d.date,buyer:d.buyer,product:d.product,lot:d.lot,reference:d.reference,quantity:String(qty),unitPrice:d.unitPrice,plateTruck:d.plateTruck||'',loadingWarehouse:d.loadingWarehouse||'',truckStatus:d.truckStatus||'To be loaded',total:String(total),paid:String(paid),seller:d.seller,dueDate:d.dueDate||''});
+    tr.innerHTML=`<td><input type="checkbox" class="invoice-select" aria-label="Select ${safe(d.invoice)}"></td><td><span class="ref-link">${safe(d.invoice)}</span></td><td>${safe(d.date)}</td><td>${safe(d.buyer)}</td><td>${invoiceItems(d).map(i=>`${safe(i.product)} · ${safe(i.lot||'—')}<br><span class="muted">${safe(i.reference)} · ${Number(i.quantity).toLocaleString('en-US')} kg</span>`).join('<br>')}</td><td>${qty.toLocaleString('en-US')} kg</td><td class="invoice-total">${safe(d.currency||'INR')} ${money(total)}</td><td><span class="status ${paid<total?'amber':''} payment-status">${d.cancelledAt?'Cancelled':paid>=total?'Paid':paid>0?'Partially Paid':'Pending'}</span>${d.cancelledAt?`<br><small title="${safe(d.cancelledAt)}">${safe(d.cancellationReason)}</small>`:''}</td><td class="current-balance">${safe(d.currency||'INR')} ${money(d.cancelledAt?0:total-paid)}</td><td><details class="sales-actions"><summary aria-label="Actions for ${safe(d.invoice)}">⋯</summary><div class="sales-action-menu"><button class="mini-btn edit-sale" ${d.cancelledAt?'disabled':''} type="button">Edit</button> <button class="mini-btn payment-btn" ${d.cancelledAt?'disabled':''}>Payment</button> <button class="mini-btn pdf-btn">Invoice PDF</button> <button class="mini-btn loaded-order-pdf" type="button">Loading Authorization PDF</button> <button class="mini-btn delete-sale" ${d.cancelledAt?'disabled':''} type="button">Delete</button></div></details></td>`;
     return tr;
   }
   function restoreSalesInvoices(){
@@ -1282,7 +1282,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     d.invoice=nextIndiaInvoiceNumber();const paid=0;
     let saved;try{saved=await saveSalesInvoice({...d,...items[0],items,quantity:qty,total:t.total,taxable:t.taxable,tax:t.tax,paid});}catch(err){notify('Could not save invoice in Supabase: '+err.message);return;}
     const tr=salesInvoiceRow(saved);document.querySelector('#salesTable tbody').prepend(tr);
-    localStorage.setItem('india:invoiceSequence:FY2627/08',d.invoice.split('/').pop());
+    localStorage.setItem('india:invoiceSequence:v2:FY2627/08',d.invoice.split('/').pop());
     toggleModal(saleModal,false);
     renderInventory();syncSalesShipmentOptions();updateSalesReceivable();updateSalesVolume30();updateSalesInvoicedMonth();
     notify(`Invoice ${d.invoice} created. ${qty.toLocaleString('en-US')} kg sold from ${items.map(i=>i.reference).join(', ')}`);
@@ -1292,7 +1292,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const now=new Date(),year=now.getFullYear(),month=now.getMonth();
     let total=0,count=0;
     document.querySelectorAll('#salesTable tbody tr[data-invoice]').forEach(row=>{
-      const raw=row.dataset.date||''; if(!raw)return;
+      if(row.dataset.cancelled==='true')return;const raw=row.dataset.date||''; if(!raw)return;
       let d;
       if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) d=new Date(raw+'T12:00:00');
       else {const p=raw.split(/[\/.-]/);d=p.length===3?new Date(Number(p[2]),Number(p[1])-1,Number(p[0]),12):new Date(raw);}
@@ -1301,7 +1301,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const label=document.getElementById('salesInvoicedMonthLabel');
     if(label)label.textContent=`Invoiced in ${now.toLocaleDateString('en-US',{month:'long'})}`;
     const kpi=document.getElementById('salesInvoicedMonthKpi');
-    if(kpi)kpi.textContent=salesCurrencyTotals(salesRows().filter(r=>String(r.dataset.date||'').slice(0,7)===new Date().toISOString().slice(0,7)).map(r=>r.dataset),d=>Number(d.total||0));
+    if(kpi)kpi.textContent=salesCurrencyTotals(salesRows().filter(r=>r.dataset.cancelled!=='true'&&String(r.dataset.date||'').slice(0,7)===new Date().toISOString().slice(0,7)).map(r=>r.dataset),d=>Number(d.total||0));
     const info=document.getElementById('salesInvoicedMonthInfo');
     if(info)info.textContent=`${count} invoice${count===1?'':'s'} this month`;
   }
@@ -1310,7 +1310,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const cutoff=new Date(today); cutoff.setDate(cutoff.getDate()-29); cutoff.setHours(0,0,0,0);
     let qty=0,count=0;
     document.querySelectorAll('#salesTable tbody tr').forEach(row=>{
-      const raw=row.dataset.date||'';
+      if(row.dataset.cancelled==='true')return;const raw=row.dataset.date||'';
       if(!raw)return;
       let d;
       if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) d=new Date(raw+'T12:00:00');
@@ -1336,7 +1336,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
       }
     });
     const kpi=document.getElementById('salesReceivableKpi');
-    if(kpi)kpi.textContent=salesCurrencyTotals(salesRows().map(r=>r.dataset),d=>Math.max(0,Number(d.total||0)-Number(d.paid||0)));
+    if(kpi)kpi.textContent=salesCurrencyTotals(salesRows().filter(r=>r.dataset.cancelled!=='true').map(r=>r.dataset),d=>Math.max(0,Number(d.total||0)-Number(d.paid||0)));
     const info=document.getElementById('salesReceivableInfo');
     if(info)info.textContent=`${openCount} open receivable${openCount===1?'':'s'}`;
   }
@@ -1419,20 +1419,23 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     if(e.target.closest('.pdf-btn')){invoicePdf(row);return;}
     if(e.target.closest('.delete-sale')){
       const invoice=row.dataset.invoice||'this invoice';
-      if(!confirm(`Delete sales invoice ${invoice}? This action cannot be undone.`))return;
-      if(row.dataset.remoteId){const {data,error}=await window.indiaDb.from('india_sales_invoices').delete().eq('id',row.dataset.remoteId).select('id');if(error||!data?.length){notify('Could not delete invoice: '+(error?.message||'Administrator access required'));return;}}
-      localStorage.removeItem(`sale:${invoice}`);localStorage.removeItem(`payments:${invoice}`);
-      const detail=paymentDetailRow(row);if(detail)detail.remove();
-      row.remove();
+      if(row.dataset.cancelled==='true')return;
+      if(Number(row.dataset.paid||0)>0){notify('Remove payment applications before cancelling this invoice');return;}
+      const reason=prompt(`Cancellation reason for ${invoice} (required):`);
+      if(reason===null)return;if(!reason.trim()){notify('Cancellation reason is required');return;}
+      try{
+        const saved=await saveSalesInvoice({...JSON.parse(localStorage.getItem('sale:'+invoice)||'{}'),cancelledAt:new Date().toISOString(),cancellationReason:reason.trim()},row.dataset.remoteId);
+        const detail=paymentDetailRow(row);if(detail)detail.remove();row.replaceWith(salesInvoiceRow(saved));
+      }catch(err){notify('Could not cancel invoice: '+err.message);return;}
       if(typeof renderInventory==='function')renderInventory();
       updateSalesReceivable();updateSalesVolume30();updateSalesInvoicedMonth();syncSalesShipmentOptions();
-      notify(`Sales invoice ${invoice} deleted`);return;
+      notify(`Sales invoice ${invoice} cancelled`);return;
     }
     if(e.target.closest('.loaded-order-pdf,.sales-actions'))return;togglePaymentDetails(row);
   };
   const salesBuyerFilter=document.getElementById('salesBuyerFilter'),salesProductFilter=document.getElementById('salesProductFilter');
   function salesRows(){return [...document.querySelectorAll('#salesTable tbody tr[data-invoice]')];}
-  function filterSales(){const buyer=salesBuyerFilter.value.toLowerCase(),product=salesProductFilter.value.toLowerCase(),status=document.getElementById('salesStatusFilter').value,from=document.getElementById('salesDateFrom').value,to=document.getElementById('salesDateTo').value;salesRows().forEach(row=>{const d=row.dataset,paid=Number(d.paid||0)>=Number(d.total||0),match=(!buyer||String(d.buyer||'').toLowerCase().includes(buyer))&&(!product||String(d.product+' '+d.reference+' '+d.items).toLowerCase().includes(product))&&(status==='all'||(status==='paid'?paid:!paid))&&(!from||d.date>=from)&&(!to||d.date<=to);row.style.display=match?'':'none';const detail=paymentDetailRow(row);if(detail)detail.style.display=match?'':'none';});updateSalesSelection();}
+  function filterSales(){const buyer=salesBuyerFilter.value.toLowerCase(),product=salesProductFilter.value.toLowerCase(),status=document.getElementById('salesStatusFilter').value,from=document.getElementById('salesDateFrom').value,to=document.getElementById('salesDateTo').value;salesRows().forEach(row=>{const d=row.dataset,paid=Number(d.paid||0)>=Number(d.total||0),match=(!buyer||String(d.buyer||'').toLowerCase().includes(buyer))&&(!product||String(d.product+' '+d.reference+' '+d.items).toLowerCase().includes(product))&&(status==='cancelled'?d.cancelled==='true':d.cancelled!=='true'&&(status==='all'||(status==='paid'?paid:!paid)))&&(!from||d.date>=from)&&(!to||d.date<=to);row.style.display=match?'':'none';const detail=paymentDetailRow(row);if(detail)detail.style.display=match?'':'none';});updateSalesSelection();}
   function updateSalesSelection(){document.getElementById('salesSelectionInfo').textContent=salesRows().filter(r=>r.querySelector('.invoice-select')?.checked).length+' selected';}
   for(const id of ['salesBuyerFilter','salesProductFilter','salesStatusFilter','salesDateFrom','salesDateTo'])document.getElementById(id).addEventListener(id.includes('Filter')&&id!=='salesStatusFilter'?'input':'change',filterSales);
   document.getElementById('salesTable').addEventListener('change',updateSalesSelection);
@@ -2688,7 +2691,7 @@ window.indiaSalesLedger=(()=>{
  const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),num=v=>Number(v||0),fmt=(v,c)=>`${c||'INR'} ${num(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`,today=()=>new Date().toLocaleDateString('en-CA');
  let receipts=[],allocations=[],banks=[],invoices=[],history=[],editType='',editId='',operationId='',demo=false;
  const state=()=>({receipts,allocations,banks,invoices,history});
- const client=()=>window.indiaDb,active=a=>!a.deleted_at,inv=id=>invoices.find(i=>i.id===id),bank=id=>banks.find(b=>b.id===id),bankText=id=>{const b=bank(id);return b?[b.bank_name,b.beneficiary_name].filter(Boolean).join(' · '):'—';},links=id=>allocations.filter(a=>active(a)&&a.receipt_id===id),credit=r=>Math.round((num(r.amount)-links(r.id).reduce((n,a)=>n+num(a.amount),0))*100)/100,balance=i=>Math.max(0,num(i.amount_inr)-num(i.paid_inr));
+ const client=()=>window.indiaDb,active=a=>!a.deleted_at,inv=id=>invoices.find(i=>i.id===id),bank=id=>banks.find(b=>b.id===id),bankText=id=>{const b=bank(id);return b?[b.bank_name,b.beneficiary_name].filter(Boolean).join(' · '):'—';},links=id=>allocations.filter(a=>active(a)&&a.receipt_id===id),credit=r=>Math.round((num(r.amount)-links(r.id).reduce((n,a)=>n+num(a.amount),0))*100)/100,balance=i=>i.status==='Cancelled'?0:Math.max(0,num(i.amount_inr)-num(i.paid_inr));
  function groups(rows,value,currency){const sums={};for(const r of rows){const c=currency(r)||'INR';sums[c]=(sums[c]||0)+value(r);}return Object.entries(sums).map(([c,n])=>fmt(n,c)).join(' · ')||'—';}
  function actions(type,id){return `<details class="sales-actions"><summary aria-label="Payment actions">⋯</summary><div class="sales-action-menu"><button type="button" data-ledger-edit="${type}" data-id="${id}">Edit</button><button type="button" data-ledger-history="${type}" data-id="${id}">History</button><button type="button" data-ledger-delete="${type}" data-id="${id}">Delete ${type==='receipt'?'advance':'payment'}</button></div></details>`;}
  function allocationRow(a){const i=inv(a.invoice_id);return `<tr><td>${esc(i?.details?.reference||'')} / ${esc(i?.invoice_number||'')}<br>${esc(i?.buyer_company||'')}</td><td>${esc(a.payment_date)}</td><td>${fmt(a.amount,a.currency)}</td><td>${esc(bankText(a.bank_id))}</td><td>${esc(a.description)}${a.receipt_id?' · Advance application':''}</td><td>${fmt(i?balance(i):0,a.currency)}</td><td>${actions('allocation',a.id)}</td></tr>`;}
