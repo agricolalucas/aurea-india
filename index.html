@@ -1344,7 +1344,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     f.elements.buyer.value=row.dataset.buyer||'';
     f.elements.reference.value=row.dataset.reference||'';
     f.elements.product.value=row.dataset.product||'';
-    f.elements.lot.innerHTML='';const shipmentOption=new Option(row.dataset.reference||'',row.dataset.lot||'');f.elements.lot.add(shipmentOption);f.elements.lot.value=row.dataset.lot||'';f.elements.payment.value=row.querySelector('.payment-status')?.textContent?.trim()==='Paid'?'Paid':'Receivable';
+    fillEditShipmentOptions(row);f.elements.payment.value=row.querySelector('.payment-status')?.textContent?.trim()==='Paid'?'Paid':'Receivable';
     f.elements.quantity.value=row.dataset.quantity||'';
     f.elements.unitPrice.value=row.dataset.unitPrice||'';
     if(f.elements.plateTruck)f.elements.plateTruck.value=row.dataset.plateTruck||'';
@@ -1355,7 +1355,10 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     document.getElementById('editSaleLabel').textContent=row.dataset.invoice||'';
     updateEditAvailable();toggleModal(editSaleModal,true);
   }
-  function updateEditAvailable(){const f=document.getElementById('editSaleForm'),ref=f.elements.reference.value;const received=getReceivingTickets(ref).reduce((sum,t)=>sum+(Number(t.weight)||0),0);const soldOther=[...document.querySelectorAll('#salesTable tbody tr')].filter(r=>r.dataset.invoice!==f.elements.originalInvoice.value&&r.dataset.reference===ref).reduce((sum,r)=>sum+Number(r.dataset.quantity||0),0);document.getElementById('editAvailableAfter').value=Math.max(0,received-soldOther-Number(f.elements.quantity.value||0)).toLocaleString('en-US')+' kg';}
+  function editAvailable(ref,invoice){const received=getReceivingTickets(ref).reduce((sum,t)=>sum+(Number(t.weight)||0),0);const soldOther=[...document.querySelectorAll('#salesTable tbody tr')].filter(r=>r.dataset.invoice!==invoice&&r.dataset.reference===ref).reduce((sum,r)=>sum+Number(r.dataset.quantity||0),0);return Math.max(0,received-soldOther);}
+  function fillEditShipmentOptions(row){const f=document.getElementById('editSaleForm'),select=f.elements.lot;select.innerHTML='<option value="">Select shipment with available inventory...</option>';const refs=new Set([...document.querySelectorAll('#importFileList .file-item')].map(shipmentRefFromItem));refs.add(row.dataset.reference);for(const ref of refs){if(!ref)continue;const available=editAvailable(ref,row.dataset.invoice);if(available<=0&&ref!==row.dataset.reference)continue;const cargo=getCargoShipmentData(ref);select.add(new Option(`${ref} · ${cargo.product||''} · ${available.toLocaleString('en-US')} kg available`,ref));}select.value=row.dataset.reference||'';}
+  function updateEditAvailable(){const f=document.getElementById('editSaleForm'),ref=f.elements.reference.value,max=editAvailable(ref,f.elements.originalInvoice.value);document.getElementById('editAvailableAfter').value=Math.max(0,max-Number(f.elements.quantity.value||0)).toLocaleString('en-US')+' kg';f.elements.quantity.max=max;}
+  document.getElementById('editSaleLot').addEventListener('change',()=>{const f=document.getElementById('editSaleForm'),ref=f.elements.lot.value;f.elements.reference.value=ref;f.elements.product.value=ref?getCargoShipmentData(ref).product||'':'';f.elements.hsn.value=window.indiaInvoice.shipmentHs(ref);updateEditAvailable();});
   document.getElementById('editSaleQuantity').addEventListener('input',updateEditAvailable);
   document.querySelector('.editSaleClose').onclick=document.querySelector('.editSaleCancel').onclick=()=>toggleModal(editSaleModal,false);
   document.getElementById('editSaleForm').onsubmit=async e=>{
@@ -1363,7 +1366,7 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
     const d=Object.fromEntries(new FormData(e.target));
     const row=[...document.querySelectorAll('#salesTable tbody tr')].find(r=>r.dataset.invoice===d.originalInvoice);
     if(!row)return;
-    const oldQty=Number(row.dataset.quantity||0),newQty=Number(d.quantity||0),ref=row.dataset.reference;
+    const oldQty=Number(row.dataset.quantity||0),newQty=Number(d.quantity||0),ref=d.reference;
     const received=getReceivingTickets(ref).reduce((sum,t)=>sum+(Number(t.weight)||0),0);
     const soldOther=[...document.querySelectorAll('#salesTable tbody tr')].filter(r=>r!==row&&r.dataset.reference===ref).reduce((sum,r)=>sum+Number(r.dataset.quantity||0),0);
     const maxQty=Math.max(0,received-soldOther);
