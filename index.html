@@ -317,7 +317,7 @@ body{background:linear-gradient(145deg,#f5f8f5 0%,#edf3ef 100%);letter-spacing:-
 <div class="intro"><div><h2>India Import Document Sequence</h2><p>Complete the Indian import process step by step for each shipment, from compliance validation to GST and inventory closeout.</p></div></div>
 <div id="documentEmptyState" class="card panel" style="text-align:center;padding:42px 24px"><h3 style="margin:0 0 8px">No shipments registered</h3><p class="muted" style="margin:0 0 18px">Register a shipment in Shipments and Cargo. It will appear here automatically.</p></div>
 <div class="sequence-wrap" id="documentSequenceWrap" style="display:none">
-<aside class="card process-summary shipment-top"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><h3>All India Import Shipments</h3><small class="muted">Review missing documents, attach PDFs directly or open files already received.</small></div><span class="status" id="fileCount">0 shipments</span></div><div class="all-shipments-table-wrap"><table class="all-shipments-table"><thead><tr><th>Reference</th><th>Cargo</th><th>B/L</th><th>IEC</th><th>Vessel</th><th>Port</th><th>ETA</th><th>Product</th><th>Qty</th><th>Status</th><th>Required Documents</th><th>Process</th></tr></thead><tbody id="importFileList"></tbody></table></div></aside>
+<aside class="card process-summary shipment-top"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><h3>All India Import Shipments</h3><small class="muted">Review missing documents, attach PDFs directly or open files already received.</small></div><span class="status" id="fileCount">0 shipments</span></div><div class="all-shipments-table-wrap"><table class="all-shipments-table"><thead><tr><th>Cargo</th><th>B/L</th><th>IEC</th><th>FSSAI</th><th>GSTIN</th><th>AD Bank Number</th><th>Customs Broker</th><th>Vessel</th><th>Port</th><th>CFS / Terminal</th><th>ETA</th><th>Product</th><th>Qty</th><th>Status</th><th>Required Documents</th><th>Process</th></tr></thead><tbody id="importFileList"></tbody></table></div></aside>
 <div class="sequence" id="shipmentSequencePanel">
 <div class="sequence-nav-card"><div class="sequence-open-head"><div><b id="openShipmentTitle">India Import Document Sequence</b><small class="muted">Six stages for the selected shipment</small></div><button type="button" class="mini-btn" id="closeShipmentSequence">✕ Close</button></div><div class="import-stage-tabs" id="importStageTabs">
 <button type="button" class="import-stage-tab active" data-stage="0">1. Registrations & compliance</button><button type="button" class="import-stage-tab" data-stage="1">2. Arrival & D/O</button><button type="button" class="import-stage-tab" data-stage="2">3. Bill of Entry</button><button type="button" class="import-stage-tab" data-stage="3">4. Inspections</button><button type="button" class="import-stage-tab" data-stage="4">5. OOC & Delivery</button><button type="button" class="import-stage-tab" data-stage="5">6. Inventory & GST</button>
@@ -789,8 +789,8 @@ function getShipmentsFromCargoTable(){
       const shipmentRef=(cells[0].querySelector('.ref-link')?.textContent||cells[0].textContent||'').trim();
       const vesselPort=(cells[3].innerText||'').split('\n').map(x=>x.trim()).filter(Boolean);
       const productQty=(cells[5].innerText||'').split('\n').map(x=>x.trim()).filter(Boolean);
-      const product=productQty[0]||'';
-      const port=vesselPort[vesselPort.length-1]||'';
+      const product=row.dataset.product||productQty[0]||'';
+      const port=row.dataset.port||vesselPort[vesselPort.length-1]||'';
       return shipmentRef ? {shipmentRef,product,port} : null;
     }).filter(Boolean);
   }
@@ -841,24 +841,16 @@ function getShipmentsFromCargoTable(){
       const row=rows.find(r=>((r.querySelector('.ref-link')?.textContent||r.querySelector('td')?.textContent||'').trim()===x.shipmentRef));
       const c=row?[...row.querySelectorAll('td')]:[];
       const text=i=>(c[i]?.innerText||'').split('\n').map(v=>v.trim()).filter(Boolean);
-      const cb=text(1), ac=text(2), vp=text(3), eta=text(4), pq=text(5), st=text(6);
-      const tr=document.createElement('tr');
-      tr.className='file-item';
-      tr.dataset.reference=x.shipmentRef;
-      tr.dataset.progress=String(Math.min(6,Number(data?.progress||0)));
-      tr.innerHTML=`
-        <td><b>${x.shipmentRef}</b><small style="display:none">${x.product||''} · ${x.port||''} · ${Math.min(6,Number(data?.progress||0))}/6 stages</small></td>
-        <td>${cb[0]||'—'}</td>
-        <td>${cb[1]||'—'}</td>
-        <td>${ac[0]||'—'}</td>
-        <td>${vp[0]||'—'}</td>
-        <td>${vp.slice(1).join(' / ')||x.port||'—'}</td>
-        <td>${eta[0]||'—'}</td>
-        <td>${pq[0]||x.product||'—'}</td>
-        <td>${pq.slice(1).join(' / ')||'—'}</td>
-        <td><span class="status">${st[0]||'—'}</span></td>
-        <td>${documentSummaryHtml(x.shipmentRef)}</td>
-        <td><button type="button" class="mini-btn shipment-open-btn">Open process</button></td>`;
+      const shipment=(window.loadedShipments||[]).find(v=>v.reference===x.shipmentRef)||{};
+      const importer=shipment.details?.importer||'';
+      const profile=window.indiaProfiles?.get(importer)||{};
+      const iec=profile.iec||shipment.acid_number||'—';
+      let sequence={};try{sequence=JSON.parse(localStorage.getItem('aureaImportDocFields:'+x.shipmentRef)||'{}')}catch(_){}
+      sequence={...sequence,...(shipment.details?.documentFields||{})};
+      const broker=sequence['in-cha']||'—';
+      const tr=document.createElement('tr');tr.className='file-item';tr.dataset.reference=x.shipmentRef;tr.dataset.progress=String(Math.min(6,Number(data?.progress||0)));
+      const cells=[shipment.bill_of_lading||'—',iec,profile.fssai||'—',profile.gstin||'—',profile.ad_bank||'—',broker,shipment.vessel||'—',shipment.arrival_port||x.port||'—',sequence['in-cfs']||'—',shipment.eta?new Date(shipment.eta+'T00:00:00').toLocaleDateString('en-GB'):'—',shipment.product||x.product||'—',`${(Number(shipment.quantity_kg||0)/1000).toLocaleString('en-US',{maximumFractionDigits:3})} MT`,shipment.status||'Pending'];
+      tr.innerHTML=`<td><b>${docEsc(x.shipmentRef)}</b><small style="display:none">${docEsc(x.product||'')} · ${docEsc(x.port||'')} · ${tr.dataset.progress}/6 stages</small></td>${cells.map(v=>`<td>${docEsc(v)}</td>`).join('')}<td>${documentSummaryHtml(x.shipmentRef)}</td><td><button type="button" class="mini-btn shipment-open-btn">Open process</button></td>`;
       list.appendChild(tr);
     });
     syncRegisteredShipments();
@@ -1017,7 +1009,7 @@ initImportStageTabs();
     tickets.forEach((t,i)=>{
       total+=Number(t.weight)||0;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${docEsc(t.date||'')}</td><td><b>${docEsc(t.container||'')}</b></td><td>${docEsc(t.ticketNo||'')}</td><td>${Number(t.weightFull||0).toLocaleString('en-US')} kg</td><td>${Number(t.weightEmpty||0).toLocaleString('en-US')} kg</td><td><b>${Number(t.weight||0).toLocaleString('en-US')} kg</b></td><td>${docEsc(t.transportName||'—')}</td><td>${t.storagePath?`<button type="button" class="mini-btn open-receiving-ticket" data-index="${i}">📎 ${docEsc(t.fileName||'Open ticket')}</button>`:`<label class="mini-btn">Attach ticket<input type="file" class="reattach-receiving-ticket" data-index="${i}" accept=".pdf,.jpg,.jpeg,.png" style="display:none"></label>`}</td><td><button class="mini-btn delete-receiving-ticket" data-index="${i}" type="button">Delete</button></td>`;
+      tr.innerHTML=`<td>${docEsc(t.date||'')}</td><td><b>${docEsc(t.container||'')}</b></td><td>${docEsc(t.ticketNo||'')}</td><td>${Number(t.weightFull||0).toLocaleString('en-US')} kg</td><td>${Number(t.weightEmpty||0).toLocaleString('en-US')} kg</td><td><b>${Number(t.weight||0).toLocaleString('en-US')} kg</b></td><td>${docEsc(t.transportName||'—')}</td><td>${t.storagePath?`<button type="button" class="mini-btn open-receiving-ticket" data-index="${i}">📎 ${docEsc(t.fileName||'Open ticket')}</button>`:`<label class="mini-btn">Attach ticket<input type="file" class="reattach-receiving-ticket" data-index="${i}" accept=".pdf,.jpg,.jpeg,.png" style="display:none"></label>`}</td><td><button class="mini-btn edit-receiving-ticket" data-index="${i}" type="button">Edit</button> <button class="mini-btn delete-receiving-ticket" data-index="${i}" type="button">Delete</button></td>`;
       tbody.appendChild(tr);
     });
     document.getElementById('selectedShipmentReceived').textContent=`${total.toLocaleString('en-US')} kg`;
@@ -1042,7 +1034,7 @@ initImportStageTabs();
       const lot=latest.lot||'—',warehouse=latest.warehouse||'—',expiry=latest.expiry||'—';
       grandTotal+=received; totalTickets+=tickets.length;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td><b>${product}</b><br><span class="muted">${lot}</span></td><td><b>${ref}</b></td><td>${warehouse}</td><td>${cargo.weightBL.toLocaleString('en-US')} kg</td><td><b>${received.toLocaleString('en-US')} kg</b><br><span class="muted">${tickets.length} ticket${tickets.length===1?'':'s'}</span></td><td>${localSold.toLocaleString('en-US')} kg</td><td><b>${available.toLocaleString('en-US')} kg</b></td><td>${expiry}</td><td><button class="mini-btn inventory-open-sequence" data-ref="${ref}" type="button">Open Sequence</button></td>`;
+      tr.innerHTML=`<td><b>${product}</b><br><span class="muted">${lot}</span></td><td><b>${ref}</b></td><td>${warehouse}</td><td>${cargo.weightBL.toLocaleString('en-US')} kg</td><td><button type="button" class="linkbtn inventory-list-tickets" data-ref="${docEsc(ref)}"><b>${received.toLocaleString('en-US')} kg</b><br><span class="muted">${tickets.length} ticket${tickets.length===1?'':'s'} · View tickets</span></button></td><td>${localSold.toLocaleString('en-US')} kg</td><td><b>${available.toLocaleString('en-US')} kg</b></td><td>${expiry}</td><td><button class="mini-btn inventory-open-sequence" data-ref="${ref}" type="button">Open Sequence</button></td>`;
       tbody.appendChild(tr);
     });
     if(!inventoryRows) tbody.innerHTML='<tr><td colspan="9" class="muted" style="text-align:center;padding:24px">Inventory will appear after the first Received Weight / Ticket is registered.</td></tr>';
@@ -1052,10 +1044,12 @@ initImportStageTabs();
     if(typeof syncSalesShipmentOptions==='function')syncSalesShipmentOptions();
     if(typeof updateDashboard==='function')updateDashboard(); if(typeof window.syncExpenseShipmentOptions==='function')window.syncExpenseShipmentOptions();
   }
+  let editingReceivingTicket=null,editingReceivingRef=null;
   const receivingModal=document.getElementById('receivingTicketModal');
   document.getElementById('addReceivingTicketBtn').onclick=()=>{
     const info=getSelectedShipmentInfo();
     if(!info){notify('Select a shipment first');return;}
+    editingReceivingTicket=null;editingReceivingRef=null;const f=document.getElementById('receivingTicketForm');f.reset();f.elements.ticketFile.required=true;f.querySelector('[type="submit"]').textContent='Save Received Weight & Ticket';
     document.getElementById('receivingShipmentLabel').textContent=`Shipment ${info.ref}`;
     toggleModal(receivingModal,true);
   };
@@ -1066,22 +1060,25 @@ initImportStageTabs();
   });
   document.getElementById('receivingTicketForm').onsubmit=async e=>{
     e.preventDefault();
-    const info=getSelectedShipmentInfo();if(!info){notify('Select a shipment first');return;}
+    const info=editingReceivingRef?{ref:editingReceivingRef}:getSelectedShipmentInfo();if(!info){notify('Select a shipment first');return;}
     const shipment=(window.loadedShipments||[]).find(x=>x.reference===info.ref);
     if(!shipment){notify('Shipment not found. Refresh the page.');return;}
     const form=e.target,button=form.querySelector('[type="submit"]');if(button.disabled)return;
     const fd=new FormData(form),file=fd.get('ticketFile'),weightFull=Number(fd.get('weightFull')),weightEmpty=Number(fd.get('weightEmpty'));
     if(!Number.isFinite(weightFull)||!Number.isFinite(weightEmpty)||weightFull<=weightEmpty){notify('Full weight must be greater than empty weight.');return;}
-    if(!file?.size){notify('Attach the receiving ticket.');return;}
-    if(file.size>10*1024*1024||!['application/pdf','image/jpeg','image/png'].includes(file.type)){notify('Attach a PDF, JPG or PNG of up to 10 MB.');return;}
+    const existing=editingReceivingTicket;
+    if(!file?.size&&!existing){notify('Attach the receiving ticket.');return;}
+    if(file?.size&&(file.size>10*1024*1024||!['application/pdf','image/jpeg','image/png'].includes(file.type))){notify('Attach a PDF, JPG or PNG of up to 10 MB.');return;}
     button.disabled=true;button.textContent='Saving…';
     try{
-      const storagePath=`receiving-tickets/${shipment.id}/${crypto.randomUUID()}.${file.name.split('.').pop().toLowerCase()}`;
-      const {error:uploadError}=await window.indiaDb.storage.from('india-profile-documents').upload(storagePath,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;
-      const details={ticketNo:fd.get('ticketNo'),transportName:fd.get('transportName')||'',lot:fd.get('lot')||'',warehouse:fd.get('warehouse')||'',expiry:fd.get('expiry')||'',fileName:file.name,storagePath,notes:fd.get('notes')||''};
+      let storagePath=existing?.storagePath||'';
+      if(file?.size){storagePath=`receiving-tickets/${shipment.id}/${crypto.randomUUID()}.${file.name.split('.').pop().toLowerCase()}`;
+      const {error:uploadError}=await window.indiaDb.storage.from('india-profile-documents').upload(storagePath,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;}
+      const details={...(existing||{}),ticketNo:fd.get('ticketNo'),transportName:fd.get('transportName')||'',lot:fd.get('lot')||'',warehouse:fd.get('warehouse')||'',expiry:fd.get('expiry')||'',fileName:file?.size?file.name:existing?.fileName||'',storagePath,notes:fd.get('notes')||''};
       const payload={shipment_id:shipment.id,shipment_reference:info.ref,ticket_date:fd.get('date'),container_number:fd.get('container'),gross_weight_kg:weightFull,tare_weight_kg:weightEmpty,received_weight_kg:weightFull-weightEmpty,details};
-      const {data,error}=await window.indiaDb.from('india_receiving_tickets').insert(payload).select().single();if(error)throw error;
-      receivingCache.set(info.ref,[...getReceivingTickets(info.ref),ticketFromDb(data)]);
+      const query=existing?window.indiaDb.from('india_receiving_tickets').update(payload).eq('id',existing.id):window.indiaDb.from('india_receiving_tickets').insert(payload);
+      const {data,error}=await query.select().single();if(error)throw error;
+      receivingCache.set(info.ref,existing?getReceivingTickets(info.ref).map(t=>t.id===existing.id?ticketFromDb(data):t):[...getReceivingTickets(info.ref),ticketFromDb(data)]);editingReceivingTicket=null;
       form.reset();toggleModal(receivingModal,false);renderReceivingTickets();renderInventory();notify(`Received weight saved for ${info.ref}`);
     }catch(err){notify('Could not save receiving ticket: '+err.message);}finally{button.disabled=false;button.textContent='Save Received Weight & Ticket';}
   };
@@ -1096,8 +1093,10 @@ initImportStageTabs();
       tickets[Number(input.dataset.index)]=ticketFromDb(data);renderReceivingTickets();notify('Ticket attachment saved');
     }catch(err){notify('Could not attach ticket: '+err.message);}finally{input.disabled=false;}
   };
-  document.querySelector('#receivingTicketTable tbody').onclick=async e=>{
-    const info=getSelectedShipmentInfo();if(!info)return;
+  async function handleReceivingTicketClick(e,context){
+    const info=context||getSelectedShipmentInfo();if(!info)return;
+    const edit=e.target.closest('.edit-receiving-ticket');
+    if(edit){const t=getReceivingTickets(info.ref)[Number(edit.dataset.index)];if(!t?.id)return;editingReceivingTicket=t;editingReceivingRef=info.ref;const f=document.getElementById('receivingTicketForm');f.reset();for(const k of ['date','container','ticketNo','weightFull','weightEmpty','weight','transportName','lot','warehouse','expiry','notes'])f.elements[k].value=t[k]??'';f.elements.ticketFile.required=false;f.querySelector('[type="submit"]').textContent='Save changes';document.getElementById('receivingShipmentLabel').textContent=`Edit ticket ${t.ticketNo||''} · ${info.ref}`;toggleModal(receivingModal,true);return;}
     const open=e.target.closest('.open-receiving-ticket');
     if(open){const t=getReceivingTickets(info.ref)[Number(open.dataset.index)];const {data,error}=await window.indiaDb.storage.from('india-profile-documents').createSignedUrl(t.storagePath,60);if(error){notify('Could not open ticket: '+error.message);return;}window.open(data.signedUrl,'_blank','noopener');return;}
     const btn=e.target.closest('.delete-receiving-ticket');if(!btn)return;
@@ -1106,7 +1105,17 @@ initImportStageTabs();
     const {data,error}=await window.indiaDb.from('india_receiving_tickets').delete().eq('id',ticket.id).select('id');if(error||!data?.length){notify('Could not delete ticket: '+(error?.message||'Administrator access is required.'));return;}
     receivingCache.set(info.ref,tickets.filter(x=>x.id!==ticket.id));renderReceivingTickets();renderInventory();notify('Receiving ticket deleted');
   };
+  document.querySelector('#receivingTicketTable tbody').onclick=e=>handleReceivingTicketClick(e);
   document.querySelector('#inventoryTable tbody').onclick=e=>{
+    const detail=e.target.closest('.inventory-ticket-details');
+    if(detail){handleReceivingTicketClick(e,{ref:detail.dataset.ref});return;}
+    const received=e.target.closest('.inventory-list-tickets');
+    if(received){const row=received.closest('tr'),next=row.nextElementSibling;if(next?.classList.contains('inventory-ticket-details')){next.remove();return;}
+      const ref=received.dataset.ref,tickets=getReceivingTickets(ref),tr=document.createElement('tr');tr.className='inventory-ticket-details';tr.dataset.ref=ref;
+      tr.innerHTML=`<td colspan="9" style="padding:18px;background:#f4f7f5"><b>Imported Container Receiving Tickets · ${docEsc(ref)}</b><div style="overflow:auto;margin-top:12px"><table class="data-table"><thead><tr><th>Date</th><th>Container</th><th>Ticket No.</th><th>Weight Full</th><th>Weight Empty</th><th>Received Weight</th><th>Transport</th><th>Warehouse / Lot</th><th>Attachment</th><th>Action</th></tr></thead><tbody>${tickets.map((t,i)=>`<tr><td>${docEsc(t.date||'')}</td><td>${docEsc(t.container||'')}</td><td>${docEsc(t.ticketNo||'')}</td><td>${fmtKg(t.weightFull)}</td><td>${fmtKg(t.weightEmpty)}</td><td><b>${fmtKg(t.weight)}</b></td><td>${docEsc(t.transportName||'—')}</td><td>${docEsc(t.warehouse||'—')} / ${docEsc(t.lot||'—')}</td><td>${t.storagePath?`<button class="mini-btn open-receiving-ticket" data-index="${i}" type="button">View ticket</button>`:docEsc(t.fileName||'—')}</td><td><button class="mini-btn edit-receiving-ticket" data-index="${i}" type="button">Edit</button></td></tr>`).join('')}</tbody><tfoot><tr><td colspan="5"><b>Total received</b></td><td><b>${fmtKg(tickets.reduce((n,t)=>n+Number(t.weight||0),0))}</b></td><td colspan="4"></td></tr></tfoot></table></div></td>`;
+      row.after(tr);return;
+    }
+
     const btn=e.target.closest('.inventory-open-sequence');if(!btn)return;
     go('documentos');
     const item=[...document.querySelectorAll('#importFileList .file-item')].find(x=>shipmentRefFromItem(x)===btn.dataset.ref);
@@ -1740,19 +1749,24 @@ document.getElementById('editSaleAddBuyer')?.addEventListener('click',addBuyerFr
       return selectedShipment?.querySelector('b')?.textContent?.trim()||'default';
     }
     function key(){return 'aureaImportDocFields:'+ref()}
+    let documentSaveQueue=Promise.resolve();
     function save(){
+      const shipment=(window.loadedShipments||[]).find(x=>x.reference===ref());
       const data={};
       document.querySelectorAll('#documentSequenceWrap [data-doc-field]').forEach(el=>{
         data[el.dataset.docField]=el.type==='file'?(el.files?.[0]?.name||el.dataset.savedFile||''):el.value;
       });
       localStorage.setItem(key(),JSON.stringify(data));
+      if(shipment&&window.indiaDb){documentSaveQueue=documentSaveQueue.then(async()=>{const details={...(shipment.details||{}),documentFields:data};const {data:updated,error}=await window.indiaDb.from('shipments').update({details}).eq('id',shipment.id).select('details').single();if(error){notify('Could not save document fields: '+error.message);return;}shipment.details=updated.details;syncImportDocumentShipments();}).catch(err=>notify('Could not save document fields: '+err.message));}
+      if(typeof syncImportDocumentShipments==='function')syncImportDocumentShipments();
     }
     function load(){
       let data={}; try{data=JSON.parse(localStorage.getItem(key())||'{}')}catch(e){}
+      const shipment=(window.loadedShipments||[]).find(x=>x.reference===ref());data={...data,...(shipment?.details?.documentFields||{})};
       document.querySelectorAll('#documentSequenceWrap [data-doc-field]').forEach(el=>{
         const v=data[el.dataset.docField];
         if(el.type==='file'){el.dataset.savedFile=v||''; if(v)el.title='Saved file: '+v}
-        else if(v!==undefined)el.value=v;
+        else el.value=v??(el.tagName==='SELECT'?el.options[0]?.value||'':'');
       });
     }
     document.getElementById('documentSequenceWrap')?.addEventListener('change',save);
