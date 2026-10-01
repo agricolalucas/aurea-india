@@ -376,10 +376,6 @@ body{background:linear-gradient(145deg,#f5f8f5 0%,#edf3ef 100%);letter-spacing:-
 
       <section class="view" id="vendas"><div class="intro"><div><h2>Notas de venda</h2><p>Faturamento local vinculado ao lote e saldo de estoque.</p></div><button class="primary" id="saleBtn">+ Nova nota de venda</button></div><div class="kpis" style="grid-template-columns:repeat(3,1fr)"><div class="card kpi"><div class="kpi-head"><span id="salesInvoicedMonthLabel">Invoiced this month</span></div><b id="salesInvoicedMonthKpi">INR 0.00</b><span class="trend" id="salesInvoicedMonthInfo">0 invoices this month</span></div><div class="card kpi"><div class="kpi-head"><span>A receber</span></div><b id="salesReceivableKpi">INR 0.00</b><span class="trend warn" id="salesReceivableInfo">Open receivables</span></div><div class="card kpi"><div class="kpi-head"><span>Volume vendido</span></div><b id="salesVolume30Kpi">0 kg</b><span class="trend" id="salesVolume30Info">Last 30 days</span></div></div>
         <div class="toolbar"><input id="salesBuyerFilter" placeholder="Filter by buyer name"><input id="salesProductFilter" placeholder="Filter by product"></div><div class="card table-card"><table class="data-table" id="salesTable"><thead><tr><th>Invoice</th><th>Date</th><th>Buyer</th><th>Product / Lot</th><th>Quantity</th><th>Total amount</th><th>Payment</th><th>Current balance</th><th>Action</th></tr></thead><tbody>
-          <tr data-invoice="INV-IN-0098" data-date="2026-09-14" data-buyer="Al Amir Group" data-product="Natural Sesame" data-lot="SES-2608-14" data-reference="AIN-2026-033" data-quantity="25000" data-unit-price="45" data-total="1125000" data-paid="0"><td><span class="ref-link">INV-IN-0098</span></td><td>14/09/2026</td><td>Al Amir Group</td><td>Natural Sesame · SES-2608-14<br><span class="muted">AIN-2026-033</span></td><td>25,000 kg</td><td class="invoice-total">INR 1,125,000</td><td><span class="status amber payment-status">Receivable</span></td><td class="current-balance">INR 1,125,000.00</td><td><button class="mini-btn edit-sale" type="button">Edit</button> <button class="mini-btn payment-btn">Payment</button> <button class="mini-btn pdf-btn">Invoice PDF</button> <button class="mini-btn loaded-order-pdf" type="button">Loaded Order PDF</button> <button class="mini-btn delete-sale" type="button">Delete</button></td></tr>
-          <tr data-invoice="INV-IN-0097" data-date="2026-09-11" data-buyer="El Saada Confectionery" data-product="Red Kidney Beans" data-lot="BRB-2607-08" data-reference="AIN-2026-029" data-quantity="24000" data-unit-price="34" data-total="816000" data-paid="816000"><td><span class="ref-link">INV-IN-0097</span></td><td>11/09/2026</td><td>El Saada Confectionery</td><td>Red Kidney Beans · BRB-2607-08<br><span class="muted">AIN-2026-029</span></td><td>24,000 kg</td><td class="invoice-total">INR 816,000</td><td><span class="status payment-status">Paid</span></td><td class="current-balance">INR 0.00</td><td><button class="mini-btn edit-sale" type="button">Edit</button> <button class="mini-btn payment-btn">Payment</button> <button class="mini-btn pdf-btn">Invoice PDF</button> <button class="mini-btn loaded-order-pdf" type="button">Loaded Order PDF</button> <button class="mini-btn delete-sale" type="button">Delete</button></td></tr>
-          <tr data-invoice="INV-IN-0096" data-date="2026-09-08" data-buyer="Cesam Foods" data-product="Popcorn Kernels" data-lot="POP-2606-22" data-reference="AIN-2026-026" data-quantity="40000" data-unit-price="33" data-total="1320000" data-paid="1320000"><td><span class="ref-link">INV-IN-0096</span></td><td>08/09/2026</td><td>Cesam Foods</td><td>Popcorn Kernels · POP-2606-22<br><span class="muted">AIN-2026-026</span></td><td>40,000 kg</td><td class="invoice-total">INR 1,320,000</td><td><span class="status payment-status">Paid</span></td><td class="current-balance">INR 0.00</td><td><button class="mini-btn edit-sale" type="button">Edit</button> <button class="mini-btn payment-btn">Payment</button> <button class="mini-btn pdf-btn">Invoice PDF</button> <button class="mini-btn loaded-order-pdf" type="button">Loaded Order PDF</button> <button class="mini-btn delete-sale" type="button">Delete</button></td></tr>
-          <tr data-invoice="INV-IN-0095" data-date="2026-09-04" data-buyer="El Rabee Group" data-product="Black Chia" data-lot="CHI-2607-03" data-reference="AIN-2026-021" data-quantity="12650" data-unit-price="60" data-total="759000" data-paid="0"><td><span class="ref-link">INV-IN-0095</span></td><td>04/09/2026</td><td>El Rabee Group</td><td>Black Chia · CHI-2607-03<br><span class="muted">AIN-2026-021</span></td><td>12,650 kg</td><td class="invoice-total">INR 759,000</td><td><span class="status red payment-status">Overdue</span></td><td class="current-balance">INR 759,000.00</td><td><button class="mini-btn edit-sale" type="button">Edit</button> <button class="mini-btn payment-btn">Payment</button> <button class="mini-btn pdf-btn">Invoice PDF</button> <button class="mini-btn loaded-order-pdf" type="button">Loaded Order PDF</button> <button class="mini-btn delete-sale" type="button">Delete</button></td></tr>
         </tbody></table></div></section>
 
       <section class="view" id="crm">
@@ -513,7 +509,7 @@ body{background:linear-gradient(145deg,#f5f8f5 0%,#edf3ef 100%);letter-spacing:-
         <th>Beneficiary Address</th>
         <th>Bank</th>
         <th>SWIFT</th>
-        <th>IBAN</th>
+        <th>IBAN</th><th>IFSC Code</th><th>MICR Code</th><th>Bank Account Number</th>
         <th>Bank Address</th>
         <th>Status</th>
         <th>Action</th>
@@ -2193,6 +2189,9 @@ document.getElementById('expenseAddBank')?.addEventListener('click',()=>{
         <div class="field"><label>Bank</label><input name="bank" required></div>
         <div class="field"><label>SWIFT</label><input name="swift" required></div>
         <div class="field"><label>IBAN</label><input name="iban"></div>
+        <div class="field"><label>IFSC Code</label><input name="ifsc" autocomplete="off"></div>
+        <div class="field"><label>MICR Code</label><input name="micr" inputmode="numeric" autocomplete="off"></div>
+        <div class="field"><label>Bank Account Number</label><input name="account_number" inputmode="numeric" autocomplete="off"></div>
         <div class="field"><label>Bank Address</label><input name="bank_address" required></div>
         <div class="field"><label>Status</label>
           <select name="status"><option>Active</option><option>Inactive</option></select>
@@ -2233,11 +2232,11 @@ document.getElementById('expenseAddBank')?.addEventListener('click',()=>{
         <td>${esc(x.beneficiary_address)}</td>
         <td>${esc(x.bank)}</td>
         <td>${esc(x.swift)}</td>
-        <td>${esc(x.iban||'—')}</td>
+        <td>${esc(x.iban||'—')}</td><td>${esc(x.ifsc||'—')}</td><td>${esc(x.micr||'—')}</td><td>${esc(x.account_number||'—')}</td>
         <td>${esc(x.bank_address)}</td>
         <td><span class="status ${x.status==='Inactive'?'red':''}">${esc(x.status)}</span></td>
         <td><button type="button" class="mini-btn edit-bank-profile">Edit</button> <button type="button" class="mini-btn delete-bank-profile">Delete</button></td>
-      </tr>`).join('') : '<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No bank registered.</td></tr>';
+      </tr>`).join('') : '<tr><td colspan="11" class="muted" style="text-align:center;padding:24px">No bank registered.</td></tr>';
   }
 
   document.querySelectorAll('.profile-subtab').forEach(btn=>{
@@ -2256,7 +2255,7 @@ document.getElementById('expenseAddBank')?.addEventListener('click',()=>{
     form.elements.edit_id.value=item?.id||'';
     document.getElementById('bankProfileModalTitle').textContent=item?'Edit Bank':'New Bank';
     if(item){
-      ['beneficiary_name','beneficiary_address','bank','swift','iban','bank_address','status'].forEach(k=>{
+      ['beneficiary_name','beneficiary_address','bank','swift','iban','ifsc','micr','account_number','bank_address','status'].forEach(k=>{
         if(form.elements[k]) form.elements[k].value=item[k]||'';
       });
     }
