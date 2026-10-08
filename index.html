@@ -215,7 +215,12 @@ body{background:linear-gradient(145deg,#f5f8f5 0%,#edf3ef 100%);letter-spacing:-
 <style>
 .status-checks{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:8px;padding:10px;border:1px solid var(--line);border-radius:9px;background:#fff}.status-checks label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}.status-checks input{width:auto!important;margin:0}.status-stack{display:flex;gap:4px;flex-wrap:wrap}.status-stack .status{margin:0}
 </style>
-<style>.bank-reconciled td{background:#dcfce7!important;color:#14532d}.reconciled-group{padding:16px;margin:12px 0;border:1px solid #86efac;border-radius:10px;background:#f0fdf4}.cash-movements>section{min-width:0}</style><style>.reconcile-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.reconcile-filters label:first-child{grid-column:1/-1}.reconcile-filters label{font-size:12px;font-weight:600}.reconcile-filters input,.reconcile-filters select{display:block;width:100%;box-sizing:border-box;margin-top:5px}.selected-footer{margin-top:12px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;font-weight:600}</style><style>.reconciled-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}.reconciled-side{min-width:0;background:#fff;border:1px solid #bbdcca;border-radius:10px;padding:12px}.reconciled-side h4{min-height:34px;margin:8px 0;font-size:14px}.reconciled-scroll{overflow:auto}.reconciled-side .data-table{min-width:560px}.reconciled-toolbar{display:flex;justify-content:flex-end;margin:12px 0}.reconciled-side-total{font-size:12px}.reconciled-zero{font-weight:800;color:#166534}.reconciled-notes{overflow-wrap:anywhere}@media(max-width:800px){.reconciled-columns{grid-template-columns:1fr}}</style><style>.bank-adjustment td,.adjustment-total{background:#fff3b0!important;color:#674b00!important}.adjustment-total{padding:8px;border-radius:6px}</style><style>.reconciled-side-total,.reconciled-side .adjustment-total,.reconciled-side .reconciliation-total{font:600 12px Arial,sans-serif;margin:10px 0;padding:8px}.reconciled-side-total b,.reconciliation-total b,.adjustment-total b{font:inherit}</style></head>
+<style>.bank-reconciled td{background:#dcfce7!important;color:#14532d}.reconciled-group{padding:16px;margin:12px 0;border:1px solid #86efac;border-radius:10px;background:#f0fdf4}.cash-movements>section{min-width:0}</style><style>.reconcile-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.reconcile-filters label:first-child{grid-column:1/-1}.reconcile-filters label{font-size:12px;font-weight:600}.reconcile-filters input,.reconcile-filters select{display:block;width:100%;box-sizing:border-box;margin-top:5px}.selected-footer{margin-top:12px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;font-weight:600}</style><style>.reconciled-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}.reconciled-side{min-width:0;background:#fff;border:1px solid #bbdcca;border-radius:10px;padding:12px}.reconciled-side h4{min-height:34px;margin:8px 0;font-size:14px}.reconciled-scroll{overflow:auto}.reconciled-side .data-table{min-width:560px}.reconciled-toolbar{display:flex;justify-content:flex-end;margin:12px 0}.reconciled-side-total{font-size:12px}.reconciled-zero{font-weight:800;color:#166534}.reconciled-notes{overflow-wrap:anywhere}@media(max-width:800px){.reconciled-columns{grid-template-columns:1fr}}</style><style>.bank-adjustment td,.adjustment-total{background:#fff3b0!important;color:#674b00!important}.adjustment-total{padding:8px;border-radius:6px}</style><style>.reconciled-side-total,.reconciled-side .adjustment-total,.reconciled-side .reconciliation-total{font:600 12px Arial,sans-serif;margin:10px 0;padding:8px}.reconciled-side-total b,.reconciliation-total b,.adjustment-total b{font:inherit}</style><style>
+#requiredImportDocumentsPanel[hidden]{display:none!important}
+#documentos.required-documents-active #documentSequenceWrap,#documentos.required-documents-active #documentEmptyState{display:none!important}
+.required-import-matrix{min-width:1800px}.required-import-matrix th{background:#eaf0f6;color:#17313b;white-space:normal;min-width:125px;font-size:11px;text-transform:uppercase}.required-import-matrix th:first-child,.required-import-matrix td:first-child{position:sticky;left:0;z-index:1;background:#fff;min-width:130px}.required-import-matrix th:first-child{background:#eaf0f6;z-index:2}.required-import-matrix td{vertical-align:middle}.required-import-document{display:flex;gap:5px;justify-content:center;align-items:center;border:1px solid #ead7d7;border-radius:9px;padding:10px;width:100%;background:#fff5f5;color:#b74a4a;cursor:pointer;font-weight:700}.required-import-document.received{color:#21856b;background:#edf8f2;border-color:#cce7d8}.required-import-document:focus-visible{outline:3px solid #2774a5;outline-offset:2px}
+</style>
+</head>
 <body>
 <div class="auth-gate" id="authGate">
   <div class="auth-card" id="loginCard">
@@ -317,11 +322,13 @@ body{background:linear-gradient(145deg,#f5f8f5 0%,#edf3ef 100%);letter-spacing:-
         </div>
       </section>
 
-      <section class="view" id="documentos">
+      <section class="view required-documents-active" id="documentos">
 <div class="intro"><div><h2>India Import Document Sequence</h2><p>Complete the Indian import process step by step for each shipment, from compliance validation to GST and inventory closeout.</p></div></div>
+<div class="expense-subtabs" id="importDocumentSubtabs"><button type="button" class="expense-subtab" data-document-tab="sequence">Import Process</button><button type="button" class="expense-subtab active" data-document-tab="required">Required Import Documents</button></div>
+<div id="requiredImportDocumentsPanel" class="card"><div class="intro"><div><h3>Required Import Documents</h3><p>All orders · Click × to add a missing PDF or ✓ to open an attached PDF.</p></div><span class="status blue" id="requiredImportOrdersCount">0 orders</span></div><div class="toolbar"><input id="requiredImportOrderSearch" placeholder="Search order, B/L or product" aria-label="Search required import documents"></div><div style="overflow-x:auto"><table class="data-table required-import-matrix"><thead id="requiredImportDocumentsHead"></thead><tbody id="requiredImportDocumentsBody"></tbody></table></div><p class="muted" style="margin-top:14px">Red × = missing document · Green ✓ = PDF attached. Requirements follow the existing order checklist.</p></div>
 <div id="documentEmptyState" class="card panel" style="text-align:center;padding:42px 24px"><h3 style="margin:0 0 8px">No shipments registered</h3><p class="muted" style="margin:0 0 18px">Register a shipment in Shipments and Cargo. It will appear here automatically.</p></div>
 <div class="sequence-wrap" id="documentSequenceWrap" style="display:none">
-<aside class="card process-summary shipment-top"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><h3>All India Import Shipments</h3><small class="muted">Review missing documents, attach PDFs directly or open files already received.</small></div><span class="status" id="fileCount">0 shipments</span></div><div class="all-shipments-table-wrap"><table class="all-shipments-table"><thead><tr><th>Cargo</th><th>B/L</th><th>IEC</th><th>FSSAI</th><th>GSTIN</th><th>AD Bank Number</th><th>Customs Broker</th><th>Vessel</th><th>Port</th><th>CFS / Terminal</th><th>ETA</th><th>Product</th><th>Qty</th><th>Status</th><th>Required Documents</th><th>Process</th></tr></thead><tbody id="importFileList"></tbody></table></div></aside>
+<aside class="card process-summary shipment-top"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><h3>All India Import Shipments</h3><small class="muted">Review all import orders and open the import process.</small></div><span class="status" id="fileCount">0 shipments</span></div><div class="all-shipments-table-wrap"><table class="all-shipments-table"><thead><tr><th>Cargo</th><th>B/L</th><th>IEC</th><th>FSSAI</th><th>GSTIN</th><th>AD Bank Number</th><th>Customs Broker</th><th>Vessel</th><th>Port</th><th>CFS / Terminal</th><th>ETA</th><th>Product</th><th>Qty</th><th>Status</th><th>Process</th></tr></thead><tbody id="importFileList"></tbody></table></div></aside>
 <div class="sequence" id="shipmentSequencePanel">
 <div class="sequence-nav-card"><div class="sequence-open-head"><div><b id="openShipmentTitle">India Import Document Sequence</b><small class="muted">Six stages for the selected shipment</small></div><button type="button" class="mini-btn" id="closeShipmentSequence">✕ Close</button></div><div class="import-stage-tabs" id="importStageTabs">
 <button type="button" class="import-stage-tab active" data-stage="0">1. Registrations & compliance</button><button type="button" class="import-stage-tab" data-stage="1">2. Arrival & D/O</button><button type="button" class="import-stage-tab" data-stage="2">3. Bill of Entry</button><button type="button" class="import-stage-tab" data-stage="3">4. Inspections</button><button type="button" class="import-stage-tab" data-stage="4">5. OOC & Delivery</button><button type="button" class="import-stage-tab" data-stage="5">6. Inventory & GST</button>
@@ -874,6 +881,36 @@ function getShipmentsFromCargoTable(){
     const missingText=summary.missing.length?`${summary.missing.slice(0,3).join(', ')}${summary.missing.length>3?` +${summary.missing.length-3} more`:''}`:'All required documents attached';
     return `<div class="doc-summary"><div class="doc-summary-top"><b>${summary.received}/${summary.total} received</b><span class="status ${summary.missing.length?'amber':''}">${summary.missing.length?`${summary.missing.length} pending`:'Complete'}</span></div><div class="doc-progress-track"><i style="width:${summary.percent}%"></i></div><small class="doc-missing">${docEsc(missingText)}</small><button type="button" class="mini-btn doc-manage-btn">${summary.missing.length?'Attach / review':'View PDFs'}</button></div>`;
   }
+  function renderRequiredImportDocuments(){
+    const query=document.getElementById('requiredImportOrderSearch').value.trim().toLowerCase();
+    const orders=getShipmentsFromCargoTable();
+    const shown=orders.filter(x=>{const shipment=(window.loadedShipments||[]).find(v=>v.reference===x.shipmentRef)||{};return [x.shipmentRef,shipment.bill_of_lading,x.product].join(' ').toLowerCase().includes(query)});
+    document.getElementById('requiredImportOrdersCount').textContent=`${shown.length} / ${orders.length} orders`;
+    document.getElementById('requiredImportDocumentsHead').innerHTML='<tr><th>Order</th><th>B/L</th>'+INDIA_REQUIRED_DOCUMENTS.map(d=>`<th>${docEsc(d.name)}</th>`).join('')+'</tr>';
+    document.getElementById('requiredImportDocumentsBody').innerHTML=shown.map(x=>{
+      const shipment=(window.loadedShipments||[]).find(v=>v.reference===x.shipmentRef)||{},docs=getShipmentDocuments(x.shipmentRef);
+      return `<tr><td><b>${docEsc(x.shipmentRef)}</b></td><td>${docEsc(shipment.bill_of_lading||'—')}</td>${INDIA_REQUIRED_DOCUMENTS.map(d=>{
+        const received=!!docs[d.id]?.length;
+        return `<td><button type="button" class="required-import-document ${received?'received':''}" data-required-order="${docEsc(x.shipmentRef)}" data-required-document="${d.id}" aria-label="${docEsc((received?'Open':'Add')+' '+d.name+' · '+x.shipmentRef)}" title="${docEsc(received?docs[d.id].map(f=>f.name).join(', '):'Add '+d.name)}"><span aria-hidden="true">${received?'✓':'×'}</span> ${received?'PDF':'Add PDF'}</button></td>`;
+      }).join('')}</tr>`;
+    }).join('')||`<tr><td colspan="${INDIA_REQUIRED_DOCUMENTS.length+2}" style="text-align:center;padding:25px">${orders.length?'No matching orders.':'No orders registered.'}</td></tr>`;
+  }
+  document.getElementById('requiredImportOrderSearch').addEventListener('input',renderRequiredImportDocuments);
+  document.getElementById('importDocumentSubtabs').addEventListener('click',e=>{
+    const button=e.target.closest('[data-document-tab]');if(!button)return;
+    const required=button.dataset.documentTab==='required';
+    document.querySelectorAll('[data-document-tab]').forEach(b=>b.classList.toggle('active',b===button));
+    document.getElementById('documentos').classList.toggle('required-documents-active',required);
+    document.getElementById('requiredImportDocumentsPanel').hidden=!required;
+    if(required)renderRequiredImportDocuments();
+  });
+  document.getElementById('requiredImportDocumentsBody').addEventListener('click',e=>{
+    const button=e.target.closest('[data-required-order]');if(!button)return;
+    openShipmentDocuments(button.dataset.requiredOrder);
+    const input=document.querySelector(`#shipmentDocumentsList [data-doc-upload="${button.dataset.requiredDocument}"]`),row=input?.closest('.document-check-row');
+    if(button.classList.contains('received'))row?.querySelector('[data-doc-open]')?.click();
+    else{row?.scrollIntoView({block:'center'});input?.click();}
+  });
   function syncImportDocumentShipments(){
     const list=document.getElementById('importFileList');
     const cargoShipments=getShipmentsFromCargoTable();
@@ -894,10 +931,11 @@ function getShipmentsFromCargoTable(){
       const broker=sequence['in-cha']||'—';
       const tr=document.createElement('tr');tr.className='file-item';tr.dataset.reference=x.shipmentRef;tr.dataset.progress=String(Math.min(6,Number(data?.progress||0)));
       const cells=[shipment.bill_of_lading||'—',iec,profile.fssai||'—',profile.gstin||'—',profile.ad_bank||'—',broker,shipment.vessel||'—',shipment.arrival_port||x.port||'—',sequence['in-cfs']||'—',shipment.eta?new Date(shipment.eta+'T00:00:00').toLocaleDateString('en-GB'):'—',shipment.product||x.product||'—',`${(Number(shipment.quantity_kg||0)/1000).toLocaleString('en-US',{maximumFractionDigits:3})} MT`,shipment.status||'Pending'];
-      tr.innerHTML=`<td><b>${docEsc(x.shipmentRef)}</b><small style="display:none">${docEsc(x.product||'')} · ${docEsc(x.port||'')} · ${tr.dataset.progress}/6 stages</small></td>${cells.map(v=>`<td>${docEsc(v)}</td>`).join('')}<td>${documentSummaryHtml(x.shipmentRef)}</td><td><button type="button" class="mini-btn shipment-open-btn">Open process</button></td>`;
+      tr.innerHTML=`<td><b>${docEsc(x.shipmentRef)}</b><small style="display:none">${docEsc(x.product||'')} · ${docEsc(x.port||'')} · ${tr.dataset.progress}/6 stages</small></td>${cells.map(v=>`<td>${docEsc(v)}</td>`).join('')}<td><button type="button" class="mini-btn shipment-open-btn">Open process</button></td>`;
       list.appendChild(tr);
     });
     syncRegisteredShipments();
+    renderRequiredImportDocuments();
     refreshDocumentSequenceVisibility();
   }
   function toggleModal(el,open){el.classList.toggle('open',open)}
